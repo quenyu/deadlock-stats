@@ -10,3 +10,4 @@ require (
 	github.com/golang-jwt/jwt/v5 v5.2.0
 	go.uber.org/zap v1.26.0
 )
+

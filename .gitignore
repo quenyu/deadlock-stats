@@ -1,0 +1,49 @@
+# IDE and Editor files
+.cursor/
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Dependencies
+node_modules/
+vendor/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+bin/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Testing
+coverage/
+
+# Cache directories
+.npm/
+.eslintcache
+.cache/
+
+# Go specific
+*.exe
+*.test
+*.prof
+*.out
+
+# Frontend specific
+.next/
+.nuxt/
+.vuepress/dist
+
+# Docker
+.docker/ 

@@ -1,0 +1,50 @@
+# State Management Standards (Zustand)
+
+## Store Structure
+- Keep stores in `shared/store` directory
+- Split stores by domain/feature
+- Use TypeScript interfaces for store types
+- Implement proper persistence where needed
+
+## Task State Structure
+```typescript
+interface Task {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+interface TasksState {
+  tasks: Task[];
+  setTaskDone: (id: string, done: boolean) => void;
+  getTotalTasks: () => number;
+  getCompletedTasks: () => number;
+  getRemainingTasks: () => number;
+}
+```
+
+## Local Storage Integration
+- Use localStorage for task persistence
+- Handle storage errors gracefully
+- Implement proper state hydration
+- Use proper TypeScript types for stored data
+
+## Store Best Practices
+- Keep stores small and focused
+- Use computed values for derived state
+- Implement proper error handling
+- Add proper TypeScript types for actions
+- Use middleware for side effects
+- Implement proper devtools integration
+
+## Data Flow
+- Use proper action naming conventions
+- Implement proper error boundaries
+- Add loading states for async actions
+- Use proper TypeScript types for payloads
+- Implement proper state updates
+description:
+globs:
+alwaysApply: false
+---
+ 

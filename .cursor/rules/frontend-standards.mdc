@@ -1,0 +1,47 @@
+# Frontend Development Standards
+
+## TypeScript Standards
+- Always use TypeScript for type safety
+- Use interfaces for data structures
+- Avoid using `any` type
+- Enable strict mode in tsconfig
+
+## React Best Practices
+- Use functional components with hooks
+- Implement proper error boundaries
+- Use React.memo() for performance optimization when needed
+- Implement proper loading states and error handling
+
+## State Management (Zustand)
+- Keep store definitions in `shared/store`
+- Split stores by domain/feature
+- Use devtools middleware in development
+- Implement proper TypeScript types for stores
+
+## UI Components
+- Use shadcn/ui components as base
+- Follow Tailwind CSS class ordering:
+  1. Layout (position, display, etc.)
+  2. Spacing (margin, padding)
+  3. Sizing (width, height)
+  4. Typography
+  5. Visual (colors, backgrounds)
+- Use CSS variables for theming
+- Implement responsive design using Tailwind breakpoints
+
+## Performance
+- Implement code splitting using React.lazy()
+- Use proper key props in lists
+- Optimize images and assets
+- Implement proper caching strategies
+
+## Accessibility
+- Use semantic HTML elements
+- Implement proper ARIA attributes
+- Ensure keyboard navigation works
+- Maintain proper color contrast ratios
+description:
+globs:
+alwaysApply: false
+---
+ 

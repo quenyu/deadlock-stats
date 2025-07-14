@@ -1,0 +1,31 @@
+# Project Structure Guide
+
+This project follows a monorepo structure with separate frontend and backend directories.
+
+## Frontend Structure (Feature-Sliced Design)
+The frontend follows Feature-Sliced Design (FSD) architecture with the following layers:
+- `app/` - Application initialization, providers, global styles
+- `pages/` - Compositional layer, routing
+- `widgets/` - Complex composite components (e.g., forms, widgets)
+- `features/` - User interactions, business processes
+- `entities/` - Business entities (models, components)
+- `shared/` - Reusable infrastructure code
+
+## Backend Structure (Clean Architecture)
+The backend follows Clean Architecture principles:
+- `handlers/` - HTTP request handlers
+- `services/` - Business logic layer
+- `repositories/` - Data access layer
+- `models/` - Domain models
+- `config/` - Configuration
+- `middleware/` - HTTP middleware
+
+## Infrastructure
+- `docker/` - Docker configuration files
+- `nginx/` - Nginx configuration
+- `.github/workflows/` - CI/CD configuration
+description:
+globs:
+alwaysApply: false
+---
+ 

@@ -1,0 +1,76 @@
+# Data Structures and API Interfaces
+
+## Frontend Data Types
+```typescript
+interface PlanData {
+  phase: string;
+  description: string;
+  tasks: {
+    backend?: Task[];
+    frontend?: Task[];
+    common?: Task[];
+  };
+}
+
+interface TechStack {
+  name: string;
+  icon: string;
+}
+
+interface TasksState {
+  id: string;
+  done: boolean;
+}
+```
+
+## Backend Models
+```go
+type User struct {
+    ID        uint      `json:"id"`
+    SteamID   string    `json:"steam_id"`
+    Username  string    `json:"username"`
+    CreatedAt time.Time `json:"created_at"`
+}
+
+type Build struct {
+    ID          uint      `json:"id"`
+    UserID      uint      `json:"user_id"`
+    Title       string    `json:"title"`
+    Description string    `json:"description"`
+    Votes       int       `json:"votes"`
+    CreatedAt   time.Time `json:"created_at"`
+}
+```
+
+## API Endpoints
+- Authentication:
+  - GET /auth/steam
+  - GET /auth/steam/callback
+  - GET /api/v1/users/me
+- Players:
+  - GET /api/v1/players/:steamID
+- Content:
+  - CRUD /api/v1/builds
+  - CRUD /api/v1/crosshairs
+  - POST /api/v1/vote
+  - CRUD /api/v1/comments
+
+## Response Formats
+```typescript
+interface APIResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+```
+
+## Error Handling
+- Use proper HTTP status codes
+- Implement consistent error formats
+- Add proper validation messages
+- Handle edge cases properly
+description:
+globs:
+alwaysApply: false
+---
+ 

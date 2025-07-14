@@ -1,0 +1,150 @@
+# Git Workflow Standards
+
+## Branch Naming Convention
+
+### Main Branches
+- `main` - основная ветка, стабильный код
+- `develop` - ветка разработки, интеграция фич
+
+### Feature Branches
+Формат: `feature/phase-{number}/{feature-name}`
+
+Примеры:
+```
+# Фаза 0: Настройка проекта
+feature/phase-0/project-setup
+feature/phase-0/docker-setup
+feature/phase-0/frontend-init
+feature/phase-0/backend-init
+
+# Фаза 1: Аутентификация
+feature/phase-1/steam-auth
+feature/phase-1/jwt-implementation
+feature/phase-1/user-store
+feature/phase-1/auth-ui
+
+# Фаза 2: Профили игроков
+feature/phase-2/player-profile
+feature/phase-2/redis-cache
+feature/phase-2/search-implementation
+feature/phase-2/profile-ui
+
+# Фаза 3-4: Пользовательский контент
+feature/phase-3/builds-crud
+feature/phase-3/voting-system
+feature/phase-4/comments-system
+feature/phase-4/content-filters
+
+# Фаза 5-7: Запуск и поддержка
+feature/phase-5/analytics
+feature/phase-6/monetization
+feature/phase-7/monitoring
+```
+
+### Bug Fix Branches
+Формат: `fix/phase-{number}/{bug-description}`
+
+Пример:
+```
+fix/phase-1/steam-callback-error
+fix/phase-2/cache-invalidation
+fix/phase-3/vote-count-sync
+```
+
+## Commit Convention
+```
+<type>(<scope>): <description>
+
+[optional body]
+
+[optional footer]
+```
+
+Types:
+- `feat`: новая функциональность
+- `fix`: исправление бага
+- `docs`: изменения в документации
+- `style`: форматирование, отступы и т.д.
+- `refactor`: рефакторинг кода
+- `test`: добавление тестов
+- `chore`: обновление зависимостей и т.д.
+
+Примеры:
+```
+feat(auth): implement Steam authentication
+fix(cache): resolve Redis connection timeout
+docs(readme): update deployment instructions
+style(ui): adjust card component spacing
+```
+
+## Workflow Process
+
+### 1. Начало новой фичи
+```bash
+git checkout develop
+git pull origin develop
+git checkout -b feature/phase-{number}/{feature-name}
+```
+
+### 2. Разработка
+- Делать коммиты часто и атомарно
+- Следовать commit convention
+- Обновлять ветку develop регулярно:
+```bash
+git checkout develop
+git pull origin develop
+git checkout feature/phase-{number}/{feature-name}
+git rebase develop
+```
+
+### 3. Завершение фичи
+```bash
+# Обновить ветку
+git checkout develop
+git pull origin develop
+git checkout feature/phase-{number}/{feature-name}
+git rebase develop
+
+# Проверить работоспособность
+npm run test        # Frontend тесты
+go test ./...      # Backend тесты
+
+# Создать Pull Request
+git push origin feature/phase-{number}/{feature-name}
+```
+
+### 4. Pull Request Requirements
+- Название: `[Phase-{number}] {Feature Description}`
+- Описание должно включать:
+  - Что было сделано
+  - Как тестировалось
+  - Скриншоты UI изменений (если есть)
+- Код должен пройти:
+  - Code Review
+  - CI/CD проверки
+  - Тесты
+
+### 5. Релизы
+После завершения фазы:
+```bash
+git checkout main
+git pull origin main
+git merge develop --no-ff
+git tag -a v{phase}.0.0 -m "Phase {number} complete"
+git push origin main --tags
+```
+
+## Правила для веток
+
+1. Никогда не коммитить напрямую в `main` или `develop`
+2. Всегда создавать feature branch из последней версии `develop`
+3. Удалять ветки после успешного слияния
+4. Использовать rebase для синхронизации с develop
+5. Следовать semantic versioning для тегов:
+   - v{phase}.{feature}.{fix}
+   - Пример: v1.2.3 - Фаза 1, фича 2, фикс 3
+description:
+globs:
+alwaysApply: false
+---
+ 

@@ -1,0 +1,41 @@
+# DevOps Standards
+
+## Docker Guidelines
+- Use multi-stage builds
+- Optimize layer caching
+- Use proper base images
+- Implement health checks
+- Follow security best practices
+
+## Nginx Configuration
+- Implement proper caching
+- Enable compression
+- Configure SSL properly
+- Implement proper proxy settings
+- Configure proper logging
+
+## CI/CD (GitHub Actions)
+- Implement proper testing
+- Use proper caching
+- Implement proper deployment strategies
+- Configure proper secrets management
+- Implement proper notifications
+
+## Monitoring
+- Implement proper logging
+- Use proper metrics
+- Configure proper alerts
+- Implement proper error tracking
+- Use proper monitoring tools
+
+## Security
+- Implement proper secrets management
+- Use proper access controls
+- Implement proper backup strategies
+- Configure proper firewalls
+- Implement proper SSL/TLS
+description:
+globs:
+alwaysApply: false
+---
+ 

@@ -1,0 +1,101 @@
+# User Content Management Standards
+
+## Content Types
+```typescript
+interface Build {
+  id: string;
+  userId: string;
+  title: string;
+  description: string;
+  weapons: Weapon[];
+  attachments: Attachment[];
+  votes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Crosshair {
+  id: string;
+  userId: string;
+  name: string;
+  config: string;
+  preview: string;
+  votes: number;
+  createdAt: string;
+}
+
+interface Comment {
+  id: string;
+  userId: string;
+  contentType: 'build' | 'crosshair';
+  contentId: string;
+  text: string;
+  createdAt: string;
+}
+```
+
+## Content Components
+```tsx
+// Build Card Component
+<div class="bg-white rounded-xl shadow-md p-6">
+  <div class="flex items-center gap-4 mb-4">
+    <UserAvatar />
+    <BuildInfo />
+    <VoteButton />
+  </div>
+  <BuildContent />
+  <CommentSection />
+</div>
+
+// Filter Component
+<div class="flex gap-4 mb-6">
+  <SortSelect />
+  <FilterCheckbox />
+  <SearchInput />
+</div>
+```
+
+## Voting System
+```typescript
+interface VoteState {
+  contentId: string;
+  contentType: 'build' | 'crosshair';
+  votes: number;
+  userVote: 1 | -1 | null;
+}
+
+interface VoteActions {
+  upvote: (contentId: string) => Promise<void>;
+  downvote: (contentId: string) => Promise<void>;
+  removeVote: (contentId: string) => Promise<void>;
+}
+```
+
+## Content Filtering
+```typescript
+interface FilterOptions {
+  sortBy: 'newest' | 'popular' | 'trending';
+  weapons?: string[];
+  timeRange?: 'day' | 'week' | 'month' | 'all';
+  searchQuery?: string;
+}
+
+interface FilterState extends FilterOptions {
+  setSort: (sort: FilterOptions['sortBy']) => void;
+  setWeapons: (weapons: string[]) => void;
+  setTimeRange: (range: FilterOptions['timeRange']) => void;
+  setSearch: (query: string) => void;
+}
+```
+
+## Content Moderation
+- Implement report system
+- Add content validation
+- Set up moderation queue
+- Handle user restrictions
+- Implement content filters
+description:
+globs:
+alwaysApply: false
+---
+ 

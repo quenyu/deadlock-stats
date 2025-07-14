@@ -4,6 +4,7 @@
 *.dll
 *.so
 *.dylib
+bin/
 
 # Test binary, built with `go test -c`
 *.test
@@ -12,4 +13,20 @@
 *.out
 
 # Go workspace file
-go.work 
+go.work
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Dependency directories
+vendor/
+
+# Local environment files
+.env
+.env.local
+
+# Build artifacts
+tmp/

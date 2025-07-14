@@ -1,0 +1,102 @@
+# Caching and Optimization Standards
+
+## Redis Caching (Backend)
+```go
+type CacheConfig struct {
+    TTL            time.Duration
+    KeyPrefix      string
+    RetryAttempts  int
+    RetryDelay     time.Duration
+}
+
+type CacheService interface {
+    Get(ctx context.Context, key string) (interface{}, error)
+    Set(ctx context.Context, key string, value interface{}, ttl time.Duration) error
+    Delete(ctx context.Context, key string) error
+    Clear(ctx context.Context, pattern string) error
+}
+```
+
+## Frontend Caching
+```typescript
+// Local Storage Cache
+interface CacheItem<T> {
+  data: T;
+  timestamp: number;
+  expiry: number;
+}
+
+class LocalStorageCache {
+  static set<T>(key: string, data: T, ttl: number): void;
+  static get<T>(key: string): T | null;
+  static remove(key: string): void;
+  static clear(): void;
+}
+
+// API Response Cache
+interface APICache<T> {
+  [key: string]: {
+    data: T;
+    expiresAt: number;
+  };
+}
+```
+
+## Performance Optimization
+- Code Splitting:
+  ```typescript
+  const PlayerProfile = lazy(() => import('./pages/PlayerProfile'));
+  const BuildEditor = lazy(() => import('./pages/BuildEditor'));
+  ```
+
+- Image Optimization:
+  ```tsx
+  <img
+    src={imageUrl}
+    loading="lazy"
+    srcSet={`${imageUrl} 1x, ${imageUrl2x} 2x`}
+    sizes="(max-width: 768px) 100vw, 50vw"
+    alt={description}
+  />
+  ```
+
+## Database Optimization
+```sql
+-- Indexes for frequently accessed data
+CREATE INDEX idx_builds_user_id ON builds(user_id);
+CREATE INDEX idx_builds_votes ON builds(votes DESC);
+CREATE INDEX idx_comments_content ON comments(content_type, content_id);
+
+-- Composite indexes for filtering
+CREATE INDEX idx_builds_weapon_votes ON builds(weapon_type, votes DESC);
+```
+
+## Memory Management
+```go
+// Connection Pooling
+type DBPool struct {
+    MaxOpenConns    int
+    MaxIdleConns    int
+    ConnMaxLifetime time.Duration
+}
+
+// Redis Pool Config
+type RedisPool struct {
+    PoolSize     int
+    MinIdleConns int
+    MaxRetries   int
+    IdleTimeout  time.Duration
+}
+```
+
+## Load Testing
+- Implement stress tests
+- Monitor response times
+- Check memory usage
+- Verify cache hits
+- Test concurrent users
+description:
+globs:
+alwaysApply: false
+---
+ 

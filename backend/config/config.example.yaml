@@ -1,0 +1,26 @@
+app:
+  name: deadlock-stats
+  version: 0.1.0
+
+server:
+  port: 8080
+  timeout: 30s
+
+database:
+  host: postgres
+  port: 5432
+  user: postgres
+  password: postgres
+  name: deadlock_stats
+  sslmode: disable
+  max_connections: 20
+
+redis:
+  host: redis
+  port: 6379
+  db: 0
+  password: ""
+
+jwt:
+  secret: "change-me-in-production"
+  expiration: 24h 

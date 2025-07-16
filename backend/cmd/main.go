@@ -65,9 +65,8 @@ func main() {
 func initConfig() {
 	viper.SetConfigName("config")
 	viper.SetConfigType("yaml")
-	viper.AddConfigPath("./config")
+	viper.AddConfigPath("./internal/config")
 
-	// Default values
 	viper.SetDefault("app.version", "0.1.0")
 	viper.SetDefault("server.port", "8080")
 

@@ -11,8 +11,10 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/quenyu/deadlock-stats/internal/config"
+	"github.com/quenyu/deadlock-stats/internal/domain"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
-	"github.com/quenyu/deadlock-stats/internal/repository"
+	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
+	"github.com/quenyu/deadlock-stats/internal/repositories"
 	"github.com/quenyu/deadlock-stats/internal/services"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
@@ -24,26 +26,44 @@ func main() {
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	cfg, err := config.LoadConfig("config.yaml")
+	cfg, err := config.LoadConfig("./internal/config/config.yaml")
 	if err != nil {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	db, err := connectDB(cfg.Database)
-	if err != nil {
-		logger.Fatal("failed to connect to database", zap.Error(err))
+	var db *gorm.DB
+	for i := 0; i < 5; i++ {
+		db, err = connectDB(cfg.Database)
+		if err == nil {
+			break
+		}
+		logger.Warn("failed to connect to database, retrying in 5 seconds...", zap.Error(err))
+		time.Sleep(5 * time.Second)
 	}
 
-	userRepository := repository.NewUserRepository(db)
-	authService := services.NewAuthService(userRepository, cfg)
-	authHandler := handlers.NewAuthHandler(authService)
+	if err != nil {
+		logger.Fatal("failed to connect to database after multiple retries", zap.Error(err))
+	}
+
+	// Run database migrations
+	err = db.AutoMigrate(&domain.User{})
+	if err != nil {
+		logger.Fatal("failed to migrate database", zap.Error(err))
+	}
+
+	userRepository := repositories.NewUserRepository(db)
+	authService := services.NewAuthService(userRepository, cfg, logger)
+	authHandler := handlers.NewAuthHandler(authService, cfg)
+	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
 	e := echo.New()
 
+	// Global middlewares
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
+	// Unprotected routes
 	apiGroup := e.Group("/api")
 	v1Group := apiGroup.Group("/v1")
 	authGroup := v1Group.Group("/auth")
@@ -51,6 +71,11 @@ func main() {
 
 	steamGroup.GET("/login", authHandler.LoginHandler)
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
+
+	// Protected routes
+	profileGroup := v1Group.Group("/profile")
+	profileGroup.Use(jwtMiddleware.Authorization)
+	profileGroup.GET("/me", authHandler.GetMyProfileHandler)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{

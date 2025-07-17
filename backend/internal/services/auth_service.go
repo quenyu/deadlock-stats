@@ -183,3 +183,7 @@ func (s *AuthService) GenerateJWTToken(userID uuid.UUID) (string, error) {
 	}
 	return tokenString, nil
 }
+
+func (s *AuthService) GetUserByID(id string) (*domain.User, error) {
+	return s.userRepository.FindByID(id)
+}

@@ -55,3 +55,20 @@ func (h *AuthHandler) GetMyProfileHandler(c echo.Context) error {
 	// For now, just return the ID
 	return c.JSON(http.StatusOK, map[string]string{"message": "Authenticated successfully", "userID": userID})
 }
+
+func (h *AuthHandler) GetUserMe(c echo.Context) error {
+	userID, ok := c.Get("userID").(string)
+	if !ok || userID == "" {
+		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid token or user ID not found"})
+	}
+
+	user, err := h.authService.GetUserByID(userID)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Could not retrieve user"})
+	}
+	if user == nil {
+		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+	}
+
+	return c.JSON(http.StatusOK, user)
+}

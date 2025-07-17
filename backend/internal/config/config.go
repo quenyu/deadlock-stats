@@ -7,43 +7,43 @@ import (
 )
 
 type ServerConfig struct {
-	Port    string
-	Timeout string
+	Port    string `mapstructure:"port"`
+	Timeout string `mapstructure:"timeout"`
 }
 
 type DatabaseConfig struct {
-	Host           string
-	Port           string
-	User           string
-	Password       string
-	Name           string
-	SSLMode        string
-	MaxConnections int
+	Host           string `mapstructure:"host"`
+	Port           string `mapstructure:"port"`
+	User           string `mapstructure:"user"`
+	Password       string `mapstructure:"password"`
+	Name           string `mapstructure:"name"`
+	SSLMode        string `mapstructure:"sslmode"`
+	MaxConnections int    `mapstructure:"max_connections"`
 }
 
 type RedisConfig struct {
-	Host     string
-	Port     string
-	DB       int
-	Password string
+	Host     string `mapstructure:"host"`
+	Port     string `mapstructure:"port"`
+	DB       int    `mapstructure:"db"`
+	Password string `mapstructure:"password"`
 }
 
 type JWTConfig struct {
-	Secret     string
-	Expiration time.Duration
+	Secret     string        `mapstructure:"secret"`
+	Expiration time.Duration `mapstructure:"expiration"`
 }
 
 type SteamConfig struct {
-	SteamAPIKey string
-	Domain      string
+	SteamAPIKey string `mapstructure:"steam_api_key"`
+	Domain      string `mapstructure:"domain"`
 }
 
 type Config struct {
-	Server   ServerConfig
-	Database DatabaseConfig
-	Redis    RedisConfig
-	JWT      JWTConfig
-	Steam    SteamConfig
+	Server   ServerConfig   `mapstructure:"server"`
+	Database DatabaseConfig `mapstructure:"database"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	Steam    SteamConfig    `mapstructure:"steam"`
 }
 
 func LoadConfig(path string) (*Config, error) {

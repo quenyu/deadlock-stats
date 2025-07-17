@@ -22,7 +22,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./backend/config/config.example.yaml:/app/config/config.yaml
+      - ./backend/internal/config/config.yaml:/app/config/config.yaml
     environment:
       - APP_ENV=development
     depends_on:
@@ -32,7 +32,7 @@ services:
   postgres:
     image: postgres:16-alpine
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       - POSTGRES_DB=deadlock_stats
       - POSTGRES_USER=postgres

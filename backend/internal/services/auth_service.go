@@ -6,55 +6,101 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
+	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 	"github.com/quenyu/deadlock-stats/internal/config"
 	"github.com/quenyu/deadlock-stats/internal/domain"
-	"github.com/quenyu/deadlock-stats/internal/repository"
-	"github.com/yohcop/openid-go"
+	"github.com/quenyu/deadlock-stats/internal/repositories"
+	"go.uber.org/zap"
 )
 
 type AuthService struct {
-	userRepository *repository.UserRepository
+	userRepository *repositories.UserRepository
 	config         *config.Config
+	logger         *zap.Logger
 }
 
-func NewAuthService(userRepository *repository.UserRepository, config *config.Config) *AuthService {
-	return &AuthService{userRepository: userRepository, config: config}
+func NewAuthService(userRepository *repositories.UserRepository, config *config.Config, logger *zap.Logger) *AuthService {
+	return &AuthService{
+		userRepository: userRepository,
+		config:         config,
+		logger:         logger.Named("AuthService"),
+	}
 }
 
 func (s *AuthService) InitiateSteamAuth() (string, error) {
-	callbackURL := s.config.Steam.Domain
-
-	authURL, err := openid.RedirectURL("https://steamcommunity.com/openid", callbackURL, callbackURL) // callbackURL, realm string
+	parsedURL, err := url.Parse(s.config.Steam.Domain)
 	if err != nil {
+		s.logger.Error("Failed to parse steam domain from config", zap.Error(err))
 		return "", err
 	}
-	return authURL, nil
+	realm := parsedURL.Scheme + "://" + parsedURL.Host
+
+	params := url.Values{}
+	params.Add("openid.ns", "http://specs.openid.net/auth/2.0")
+	params.Add("openid.mode", "checkid_setup")
+	params.Add("openid.return_to", s.config.Steam.Domain)
+	params.Add("openid.realm", realm)
+	params.Add("openid.identity", "http://specs.openid.net/auth/2.0/identifier_select")
+	params.Add("openid.claimed_id", "http://specs.openid.net/auth/2.0/identifier_select")
+
+	return "https://steamcommunity.com/openid/login?" + params.Encode(), nil
 }
 
 func (s *AuthService) HandleSteamCallback(r *http.Request) (string, error) {
-	claimedID, err := openid.Verify(r.URL.String(), openid.DiscoveryCache(nil), openid.NonceStore(nil))
+	s.logger.Info("Handling Steam callback")
+
+	params := r.URL.Query()
+	params.Set("openid.mode", "check_authentication")
+
+	reqURL := "https://steamcommunity.com/openid/login"
+	resp, err := http.PostForm(reqURL, params)
 	if err != nil {
+		s.logger.Error("Failed to make verification request to Steam", zap.Error(err))
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		s.logger.Error("Failed to read response body from Steam", zap.Error(err))
 		return "", err
 	}
 
+	if !strings.Contains(string(body), "is_valid:true") {
+		err := errors.New("authentication failed: is_valid is not true")
+		s.logger.Error("Steam authentication failed", zap.Error(err), zap.String("response", string(body)))
+		return "", err
+	}
+
+	claimedID := params.Get("openid.claimed_id")
 	steamIDRegex := regexp.MustCompile(`^https://steamcommunity\.com/openid/id/(\d+)$`)
 	matches := steamIDRegex.FindStringSubmatch(claimedID)
 	if len(matches) < 2 {
-		return "", errors.New("cannot parse steam id from claimed id")
+		err := errors.New("cannot parse steam id from claimed id")
+		s.logger.Error("Failed to parse SteamID", zap.String("claimedID", claimedID))
+		return "", err
 	}
 	steamID := matches[1]
+	s.logger.Info("SteamID verified", zap.String("steamID", steamID))
 
 	user, err := s.userRepository.FindBySteamID(steamID)
 	if err != nil {
+		s.logger.Warn("User not found, creating new user", zap.String("steamID", steamID), zap.Error(err))
 		playerSummaries, err := s.GetPlayerSummaries(steamID)
 		if err != nil {
+			s.logger.Error("Failed to get player summaries from Steam API", zap.String("steamID", steamID), zap.Error(err))
 			return "", err
 		}
+		s.logger.Info("Successfully got player summaries", zap.String("nickname", playerSummaries.Nickname))
 
 		user = &domain.User{
+			ID:         uuid.New(),
 			SteamID:    steamID,
 			Nickname:   playerSummaries.Nickname,
 			AvatarURL:  playerSummaries.AvatarURL,
@@ -65,16 +111,26 @@ func (s *AuthService) HandleSteamCallback(r *http.Request) (string, error) {
 
 		err = s.userRepository.Create(user)
 		if err != nil {
+			s.logger.Error("Failed to create user in database", zap.Error(err))
 			return "", err
 		}
+		s.logger.Info("Successfully created new user", zap.String("userID", user.ID.String()))
+	} else {
+		s.logger.Info("Found existing user", zap.String("userID", user.ID.String()))
 	}
 
-	// TODO: Generate JWT token for the user
-	return "jwtTokenGoesHere", nil
+	jwtToken, err := s.GenerateJWTToken(user.ID)
+	if err != nil {
+		s.logger.Error("Failed to generate JWT token", zap.Error(err))
+		return "", err
+	}
+	s.logger.Info("Successfully generated JWT token")
+
+	return jwtToken, nil
 }
 
 func (s *AuthService) GetPlayerSummaries(steamID string) (*domain.User, error) {
-	url := fmt.Sprintf("http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", s.config.Steam.SteamAPIKey, steamID)
+	url := fmt.Sprintf("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", s.config.Steam.SteamAPIKey, steamID)
 
 	response, err := http.Get(url)
 	if err != nil {
@@ -112,4 +168,18 @@ func (s *AuthService) GetPlayerSummaries(steamID string) (*domain.User, error) {
 		AvatarURL:  playerData.AvatarURL,
 		ProfileURL: playerData.ProfileURL,
 	}, nil
+}
+
+func (s *AuthService) GenerateJWTToken(userID uuid.UUID) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": userID,
+		"exp": time.Now().Add(s.config.JWT.Expiration).Unix(),
+		"iat": time.Now().Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte(s.config.JWT.Secret))
+	if err != nil {
+		return "", err
+	}
+	return tokenString, nil
 }

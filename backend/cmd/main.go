@@ -73,9 +73,9 @@ func main() {
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
 
 	// Protected routes
-	profileGroup := v1Group.Group("/profile")
-	profileGroup.Use(jwtMiddleware.Authorization)
-	profileGroup.GET("/me", authHandler.GetMyProfileHandler)
+	protectedGroup := v1Group.Group("")
+	protectedGroup.Use(jwtMiddleware.Authorization)
+	protectedGroup.GET("/users/me", authHandler.GetUserMe)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{

@@ -72,6 +72,9 @@ func main() {
 	steamGroup.GET("/login", authHandler.LoginHandler)
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
 
+	// Logout route
+	authGroup.GET("/logout", authHandler.LogoutHandler)
+
 	// Protected routes
 	protectedGroup := v1Group.Group("")
 	protectedGroup.Use(jwtMiddleware.Authorization)

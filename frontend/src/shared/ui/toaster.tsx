@@ -14,7 +14,7 @@ interface ToastProps {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: React.ReactNode
-  [key: string]: any
+  [key: string]: unknown
 }
 
 export function Toaster() {

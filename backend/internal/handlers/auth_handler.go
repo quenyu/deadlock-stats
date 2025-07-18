@@ -45,6 +45,22 @@ func (s *AuthHandler) CallbackHandler(c echo.Context) error {
 	return c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000/")
 }
 
+// LogoutHandler clears JWT cookie and returns success message
+func (s *AuthHandler) LogoutHandler(c echo.Context) error {
+	cookie := &http.Cookie{
+		Name:     "jwt",
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
+	}
+	c.SetCookie(cookie)
+
+	return c.JSON(http.StatusOK, map[string]string{"message": "logged out"})
+}
+
 func (h *AuthHandler) GetMyProfileHandler(c echo.Context) error {
 	userID, ok := c.Get("userID").(string)
 	if !ok {

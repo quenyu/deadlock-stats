@@ -1,27 +1,19 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { useEffect } from 'react'
 import { RouterProvider } from 'react-router-dom'
+import { ThemeProvider } from './providers/theme'
 import { router } from './providers/router'
-import { ThemeProvider } from '@/app/providers/theme'
-import { Toaster } from '@/shared/ui/toaster'
+import { useUserStore } from '@/entities/user'
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      retry: false,
-    },
-  },
-})
+export function App() {
+  const fetchUser = useUserStore((state) => state.fetchUser)
 
-function App() {
+  useEffect(() => {
+    fetchUser()
+  }, [fetchUser])
+
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-        <RouterProvider router={router} />
-        <Toaster />
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <RouterProvider router={router} />
+    </ThemeProvider>
   )
-}
-
-export default App 
+} 

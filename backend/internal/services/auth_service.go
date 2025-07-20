@@ -44,7 +44,7 @@ func (s *AuthService) InitiateSteamAuth() (string, error) {
 	params := url.Values{}
 	params.Add("openid.ns", "http://specs.openid.net/auth/2.0")
 	params.Add("openid.mode", "checkid_setup")
-	params.Add("openid.return_to", s.config.Steam.Domain)
+	params.Add("openid.return_to", s.config.Steam.Domain + "/api/v1/auth/steam/callback")
 	params.Add("openid.realm", realm)
 	params.Add("openid.identity", "http://specs.openid.net/auth/2.0/identifier_select")
 	params.Add("openid.claimed_id", "http://specs.openid.net/auth/2.0/identifier_select")

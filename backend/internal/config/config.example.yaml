@@ -21,6 +21,10 @@ redis:
   db: 0
   password: ""
 
+steam:
+  steam_api_key: 1234567890
+  domain: http://localhost:8080
+
 jwt:
   secret: "change-me-in-production"
   expiration: 24h 

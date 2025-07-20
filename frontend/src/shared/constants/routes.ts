@@ -1,3 +1,5 @@
+import { API_ENDPOINTS } from './api';
+
 export const routes = {
   home: '/',
   player: {
@@ -11,10 +13,13 @@ export const routes = {
     edit: (id = ':id') => `/builds/${id}/edit`,
   },
   auth: {
-    steam: '/api/v1/auth/steam/login',
-    callback: '/api/v1/auth/steam/callback',
-    logout: '/api/v1/auth/logout',
+    steam: API_ENDPOINTS.auth.steamLogin,
+    logout: API_ENDPOINTS.auth.logout,
   },
   analytics: '/analytics',
   premium: '/premium',
-} as const 
+} as const
+
+export const isExternalRoute = (path: string): boolean => {
+  return path.startsWith('http://') || path.startsWith('https://');
+}; 

@@ -1,7 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom'
 import { Layout } from '@/widgets/layout'
 import { HomePage } from '@/pages/home'
-import { SteamCallbackPage } from '@/pages/auth/SteamCallbackPage'
 import { NotFoundPage } from '@/pages/not-found'
 import { routes } from '@/shared/constants/routes'
 import { ProtectedRoute } from '@/shared/lib/ProtectedRoute'
@@ -9,19 +8,17 @@ import { ProtectedRoute } from '@/shared/lib/ProtectedRoute'
 // Temporary stub components until features are implemented
 const ComingSoon = () => <div className="p-8 text-center text-muted-foreground">Coming soon...</div>
 
+const rootPath = routes.home;
+
 export const router = createBrowserRouter([
   {
-    path: routes.home,
+    path: rootPath,
     element: <Layout />,
     errorElement: <NotFoundPage />,
     children: [
       {
         index: true,
         element: <HomePage />,
-      },
-      {
-        path: routes.auth.callback,
-        element: <SteamCallbackPage />,
       },
       {
         path: routes.player.profile(),

@@ -1,21 +1,10 @@
-import axios, { AxiosRequestHeaders } from 'axios';
-
-const baseURL = import.meta.env.VITE_API_URL;
+import axios from 'axios';
+import { API_BASE_URL } from '../constants/api';
 
 export const api = axios.create({
-	baseURL,
+	baseURL: API_BASE_URL,
 	withCredentials: true,
 });
-
-api.interceptors.request.use((config) => {
-	const token = localStorage.getItem('token')
-	if (token) {
-		const headers = (config.headers ?? {}) as AxiosRequestHeaders
-		headers.Authorization = token
-		config.headers = headers
-	}
-	return config
-})
 
 api.interceptors.response.use(
 	(response) => response,

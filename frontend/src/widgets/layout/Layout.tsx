@@ -1,5 +1,5 @@
 import { Outlet } from 'react-router-dom'
-import { AuthWidget } from '../auth/AuthWidget'
+import { AuthWidget } from '@/widgets/auth/AuthWidget'
 import { Navbar } from '@/widgets/Navbar'
 import { ThemeToggle } from '@/features/theme-toggle/ThemeToggle'
 

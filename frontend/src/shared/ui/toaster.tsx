@@ -1,42 +1,29 @@
-import * as React from "react"
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "./toast"
-import { useToast } from "./use-toast"
+"use client"
 
-interface ToastProps {
-  id: string
-  title?: React.ReactNode
-  description?: React.ReactNode
-  action?: React.ReactNode
-  [key: string]: unknown
-}
+import { Toaster as Sonner, ToasterProps } from "sonner"
+import { useTheme } from "@/app/providers/theme"
 
-export function Toaster() {
-  const { toasts } = useToast()
+const Toaster = ({ ...props }: ToasterProps) => {
+  const { theme } = useTheme()
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }: ToastProps) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        )
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <Sonner
+      theme={theme as ToasterProps["theme"]}
+      className="toaster group"
+      toastOptions={{
+        classNames: {
+          toast:
+            "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
+          description: "group-[.toast]:text-muted-foreground",
+          actionButton:
+            "group-[.toast]:bg-primary group-[.toast]:text-primary-foreground",
+          cancelButton:
+            "group-[.toast]:bg-muted group-[.toast]:text-muted-foreground",
+        },
+      }}
+      {...props}
+    />
   )
-} 
+}
+
+export { Toaster } 

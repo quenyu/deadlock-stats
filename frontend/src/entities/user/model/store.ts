@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 import { User } from '../types/types'
 import { fetchCurrentUser } from '../api/fetchCurrentUser'
+import { API_ENDPOINTS } from '@/shared/constants/api'
 
 interface UserState {
   user: User | null
@@ -36,11 +37,10 @@ const useUserStore = create<UserState>()(
       },
       logout: async () => {
         try {
-          await fetch('/api/v1/auth/logout', { credentials: 'include' })
+          await fetch(API_ENDPOINTS.auth.logout, { credentials: 'include' })
         } catch (e) {
           // ignore
         } finally {
-          localStorage.removeItem('token')
           set({ user: null })
         }
       },

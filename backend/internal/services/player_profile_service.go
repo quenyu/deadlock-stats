@@ -216,6 +216,10 @@ func (s *PlayerProfileService) GetRecentMatches(ctx context.Context, steamID str
 	return s.playerProfileRepository.FindRecentMatchesBySteamID(ctx, steamID, 5)
 }
 
+func (s *PlayerProfileService) SearchPlayers(ctx context.Context, query string) ([]domain.User, error) {
+	return s.playerProfileRepository.SearchByNickname(ctx, query)
+}
+
 func (s *PlayerProfileService) calculateAndFillStats(profile *domain.PlayerProfile, card *deadlockapi.DeadlockCard, matches []domain.Match, mmrHistory []deadlockapi.DeadlockMMR) {
 	var wins, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
 	for _, match := range matches {

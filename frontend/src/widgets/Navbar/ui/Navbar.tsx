@@ -8,6 +8,7 @@ import {
   Search,
   PlusCircle,
   Star,
+  Crosshair,
 } from 'lucide-react'
 import {
   NavigationMenu,
@@ -33,25 +34,25 @@ import { useUserStore } from '@/entities/user'
 const navConfig = (isAuthenticated: boolean, steamId?: string) => [
   {
     href: routes.home,
-    label: 'Главная',
+    label: 'Home',
     icon: Home,
   },
   {
-    label: 'Игроки',
+    label: 'Players',
     icon: Users,
     subItems: [
       {
-        title: 'Поиск',
+        title: 'Search',
         href: routes.player.search,
-        description: 'Найти игрока по Steam ID или никнейму',
+        description: 'Find a player by Steam ID or nickname',
         icon: Search,
       },
       ...(isAuthenticated && steamId
         ? [
             {
-              title: 'Мой профиль',
+              title: 'My Profile',
               href: routes.player.profile(steamId),
-              description: 'Посмотреть свою статистику и достижения',
+              description: 'View your stats and achievements',
               icon: User,
             },
           ]
@@ -59,21 +60,43 @@ const navConfig = (isAuthenticated: boolean, steamId?: string) => [
     ],
   },
   {
-    label: 'Билды',
+    label: 'Crosshairs',
+    icon: Crosshair,
+    subItems: [
+      {
+        title: 'All Crosshairs',
+        href: routes.crosshairs.list,
+        description: 'Browse all published crosshairs',
+        icon: Crosshair,
+      },
+      ...(isAuthenticated
+        ? [
+            {
+              title: 'Create Crosshair',
+              href: routes.crosshairs.create,
+              description: 'Publish a new crosshair for the community',
+              icon: PlusCircle,
+            },
+          ]
+        : []),
+    ],
+  },
+  {
+    label: 'Builds',
     icon: Swords,
     subItems: [
       {
-        title: 'Все билды',
+        title: 'All Builds',
         href: routes.builds.list,
-        description: 'Просмотреть все опубликованные билды',
+        description: 'Browse all published builds',
         icon: Swords,
       },
       ...(isAuthenticated
         ? [
             {
-              title: 'Создать билд',
+              title: 'Create Build',
               href: routes.builds.create,
-              description: 'Опубликовать новый билд для сообщества',
+              description: 'Publish a new build for the community',
               icon: PlusCircle,
             },
           ]
@@ -82,19 +105,29 @@ const navConfig = (isAuthenticated: boolean, steamId?: string) => [
   },
   {
     href: routes.analytics,
-    label: 'Аналитика',
+    label: 'Analytics',
     icon: BarChart,
   },
   {
     href: routes.premium,
-    label: 'Премиум',
+    label: 'Premium',
     icon: Star,
   },
 ]
 
 export function Navbar() {
-  const { user } = useUserStore()
-  const navigation = navConfig(!!user, user?.steam_id)
+  const { user, isLoading } = useUserStore()
+
+  if (isLoading) {
+    return (
+      <>
+        <div className="hidden h-10 w-full animate-pulse rounded-md bg-muted md:block" />
+        <div className="h-10 w-10 animate-pulse rounded-md bg-muted md:hidden" />
+      </>
+    )
+  }
+  
+  const navigation = navConfig(!!user, user ? user.steam_id : undefined)
 
   return (
     <>
@@ -160,9 +193,9 @@ function MobileNav({ navigation }: { navigation: ReturnType<typeof navConfig> })
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="w-[260px] p-4 z-[100]">
-          <SheetTitle className="sr-only">Главное меню</SheetTitle>
+          <SheetTitle className="sr-only">Main Menu</SheetTitle>
           <SheetDescription className="sr-only">
-            Навигационное меню для мобильных устройств
+            Navigation menu for mobile devices
           </SheetDescription>
           <AppLink to="/" className="mb-6 flex items-center space-x-2">
             <span className="text-lg font-bold">Deadlock Stats</span>

@@ -64,3 +64,17 @@ func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 
 	return c.JSON(http.StatusOK, matches)
 }
+
+func (h *PlayerProfileHandler) SearchPlayers(c echo.Context) error {
+	query := c.QueryParam("q")
+	if len(query) < 3 {
+		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Query must be at least 3 characters long"})
+	}
+
+	players, err := h.service.SearchPlayers(c.Request().Context(), query)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Failed to search for players"})
+	}
+
+	return c.JSON(http.StatusOK, players)
+}

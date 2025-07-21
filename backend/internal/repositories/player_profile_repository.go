@@ -152,6 +152,18 @@ func (r *PlayerProfilePostgresRepository) FindRecentMatchesBySteamID(ctx context
 	return matches, nil
 }
 
+func (r *PlayerProfilePostgresRepository) SearchByNickname(ctx context.Context, query string) ([]domain.User, error) {
+	var users []domain.User
+	err := r.db.WithContext(ctx).
+		Where("nickname ILIKE ?", fmt.Sprintf("%%%s%%", query)).
+		Limit(10).
+		Find(&users).Error
+	if err != nil {
+		return nil, err
+	}
+	return users, nil
+}
+
 func (r *PlayerProfilePostgresRepository) UpdateProfile(ctx context.Context, profile *domain.PlayerProfile) error {
 	return r.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
 		statsQuery := `

@@ -98,6 +98,7 @@ func main() {
 	steamGroup.GET("/login", authHandler.LoginHandler)
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
 
+	v1Group.GET("/players/search", playerProfileHandler.SearchPlayers)
 	v1Group.GET("/players/:steamId", playerProfileHandler.GetPlayerProfileV2)
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)
 

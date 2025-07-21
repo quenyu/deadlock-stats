@@ -6,9 +6,21 @@ import (
 	"github.com/spf13/viper"
 )
 
+type Config struct {
+	Server   ServerConfig   `mapstructure:"server"`
+	Database DatabaseConfig `mapstructure:"database"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	Steam    SteamConfig    `mapstructure:"steam"`
+	App      AppConfig      `mapstructure:"app"`
+	Redis    RedisConfig    `mapstructure:"redis"`
+}
+
+type AppConfig struct {
+	Version string `mapstructure:"version"`
+}
+
 type ServerConfig struct {
-	Port    string `mapstructure:"port"`
-	Timeout string `mapstructure:"timeout"`
+	Port string `mapstructure:"port"`
 }
 
 type DatabaseConfig struct {
@@ -22,10 +34,9 @@ type DatabaseConfig struct {
 }
 
 type RedisConfig struct {
-	Host     string `mapstructure:"host"`
-	Port     string `mapstructure:"port"`
-	DB       int    `mapstructure:"db"`
+	Addr     string `mapstructure:"addr"`
 	Password string `mapstructure:"password"`
+	DB       int    `mapstructure:"db"`
 }
 
 type JWTConfig struct {
@@ -34,16 +45,8 @@ type JWTConfig struct {
 }
 
 type SteamConfig struct {
-	SteamAPIKey string `mapstructure:"steam_api_key"`
-	Domain      string `mapstructure:"domain"`
-}
-
-type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Steam    SteamConfig    `mapstructure:"steam"`
+	RedirectURL string `mapstructure:"domain"`
+	APIKey      string `mapstructure:"steam_api_key"`
 }
 
 func LoadConfig(path string) (*Config, error) {

@@ -34,7 +34,7 @@ func NewAuthService(userRepository *repositories.UserRepository, config *config.
 }
 
 func (s *AuthService) InitiateSteamAuth() (string, error) {
-	parsedURL, err := url.Parse(s.config.Steam.Domain)
+	parsedURL, err := url.Parse(s.config.Steam.RedirectURL)
 	if err != nil {
 		s.logger.Error("Failed to parse steam domain from config", zap.Error(err))
 		return "", err
@@ -44,7 +44,7 @@ func (s *AuthService) InitiateSteamAuth() (string, error) {
 	params := url.Values{}
 	params.Add("openid.ns", "http://specs.openid.net/auth/2.0")
 	params.Add("openid.mode", "checkid_setup")
-	params.Add("openid.return_to", s.config.Steam.Domain + "/api/v1/auth/steam/callback")
+	params.Add("openid.return_to", s.config.Steam.RedirectURL+"/api/v1/auth/steam/callback")
 	params.Add("openid.realm", realm)
 	params.Add("openid.identity", "http://specs.openid.net/auth/2.0/identifier_select")
 	params.Add("openid.claimed_id", "http://specs.openid.net/auth/2.0/identifier_select")
@@ -130,7 +130,7 @@ func (s *AuthService) HandleSteamCallback(r *http.Request) (string, error) {
 }
 
 func (s *AuthService) GetPlayerSummaries(steamID string) (*domain.User, error) {
-	url := fmt.Sprintf("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", s.config.Steam.SteamAPIKey, steamID)
+	url := fmt.Sprintf("https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/?key=%s&steamids=%s", s.config.Steam.APIKey, steamID)
 
 	response, err := http.Get(url)
 	if err != nil {

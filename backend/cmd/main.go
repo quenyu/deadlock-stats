@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -49,6 +50,8 @@ func main() {
 		logger.Fatal("failed to connect to database after multiple retries", zap.Error(err))
 	}
 
+	rdb := connectRedis(cfg.Redis, logger)
+
 	sqlDB, err := db.DB()
 	if err != nil {
 		logger.Fatal("failed to get underlying sql.DB", zap.Error(err))
@@ -68,7 +71,7 @@ func main() {
 	deadlockAPIClient := deadlockapi.NewClient()
 
 	authService := services.NewAuthService(userRepository, cfg, logger)
-	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, deadlockAPIClient, staticDataService, logger)
+	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, deadlockAPIClient, staticDataService, rdb, logger)
 
 	authHandler := handlers.NewAuthHandler(authService, cfg)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
@@ -133,6 +136,23 @@ func main() {
 	if err := e.Shutdown(ctx); err != nil {
 		logger.Fatal("error during server shutdown", zap.Error(err))
 	}
+}
+
+func connectRedis(cfg config.RedisConfig, logger *zap.Logger) *redis.Client {
+	rdb := redis.NewClient(&redis.Options{
+		Addr:     cfg.Addr,
+		Password: cfg.Password,
+		DB:       cfg.DB,
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if _, err := rdb.Ping(ctx).Result(); err != nil {
+		logger.Fatal("failed to connect to redis", zap.Error(err))
+	}
+
+	return rdb
 }
 
 func connectDB(cfg config.DatabaseConfig) (*gorm.DB, error) {

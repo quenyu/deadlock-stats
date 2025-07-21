@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"math"
 	"sort"
@@ -9,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-redis/redis/v8"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/domain"
 	"github.com/quenyu/deadlock-stats/internal/dto"
@@ -20,6 +22,7 @@ type PlayerProfileService struct {
 	playerProfileRepository *repositories.PlayerProfilePostgresRepository
 	deadlockAPIClient       *deadlockapi.Client
 	staticDataService       *StaticDataService
+	redisClient             *redis.Client
 	logger                  *zap.Logger
 }
 
@@ -27,17 +30,31 @@ func NewPlayerProfileService(
 	playerProfileRepository *repositories.PlayerProfilePostgresRepository,
 	deadlockAPIClient *deadlockapi.Client,
 	staticDataService *StaticDataService,
+	redisClient *redis.Client,
 	logger *zap.Logger,
 ) *PlayerProfileService {
 	return &PlayerProfileService{
 		playerProfileRepository: playerProfileRepository,
 		deadlockAPIClient:       deadlockAPIClient,
 		staticDataService:       staticDataService,
+		redisClient:             redisClient,
 		logger:                  logger,
 	}
 }
 
 func (s *PlayerProfileService) GetExtendedPlayerProfile(ctx context.Context, steamID string) (*dto.ExtendedPlayerProfile, error) {
+	cacheKey := fmt.Sprintf("player-profile:%s", steamID)
+	val, err := s.redisClient.Get(ctx, cacheKey).Result()
+	if err == nil {
+		var profile dto.ExtendedPlayerProfile
+		if err := json.Unmarshal([]byte(val), &profile); err == nil {
+			s.logger.Info("cache hit for player profile", zap.String("steamID", steamID))
+			return &profile, nil
+		}
+	}
+
+	s.logger.Info("cache miss for player profile", zap.String("steamID", steamID))
+
 	var card *deadlockapi.DeadlockCard
 	var matches []deadlockapi.DeadlockMatch
 	var heroStats []domain.HeroStat
@@ -102,20 +119,27 @@ func (s *PlayerProfileService) GetExtendedPlayerProfile(ctx context.Context, ste
 	s.enrichHeroStats(heroStats)
 	s.calculateAndFillStats(profile, card, domainMatches, mmrHistory)
 
-	return &dto.ExtendedPlayerProfile{
+	extendedProfile := &dto.ExtendedPlayerProfile{
 		Card:                card,
 		MatchHistory:        domainMatches,
 		HeroStats:           heroStats,
 		MMRHistory:          mmrHistory,
+		TotalMatches:        profile.TotalMatches,
 		WinRate:             profile.WinRate,
 		KDRatio:             profile.KDRatio,
-		TotalMatches:        profile.TotalMatches,
 		PerformanceDynamics: profile.PerformanceDynamics,
 		Nickname:            profile.Nickname,
 		AvatarURL:           profile.AvatarURL,
 		RankImage:           profile.RankImage,
 		AvgSoulsPerMin:      profile.AvgSoulsPerMin,
-	}, nil
+	}
+
+	data, err := json.Marshal(extendedProfile)
+	if err == nil {
+		s.redisClient.Set(ctx, cacheKey, data, time.Hour).Err()
+	}
+
+	return extendedProfile, nil
 }
 
 func (s *PlayerProfileService) buildDomainMatches(matches []deadlockapi.DeadlockMatch, mmrHistory []deadlockapi.DeadlockMMR) []domain.Match {

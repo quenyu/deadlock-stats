@@ -16,10 +16,9 @@ database:
   max_connections: 20
 
 redis:
-  host: redis
-  port: 6379
-  db: 0
+  addr: "redis:6379"
   password: ""
+  db: 0
 
 steam:
   steam_api_key: 1234567890

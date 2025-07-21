@@ -11,6 +11,6 @@ type PlayerStats struct {
 	KDRatio          float64   `json:"kd_ratio"`
 	WinRate          float64   `json:"win_rate"`
 	AvgMatchesPerDay float64   `json:"avg_matches_per_day"`
-	FavoriteWeapon   string    `json:"favorite_weapon"`
+	FavoriteHero     string    `json:"favorite_hero"`
 	LastUpdatedAt    time.Time `json:"last_updated_at"`
 }

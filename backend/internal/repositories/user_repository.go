@@ -32,8 +32,30 @@ func (r *UserRepository) Update(user *domain.User) error {
 }
 
 func (r *UserRepository) FindOrCreate(user *domain.User) error {
-	query := `INSERT INTO users (steam_id, nickname, avatar_url, profile_url, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (steam_id) DO UPDATE SET nickname = $2, avatar_url = $3, profile_url = $4, updated_at = $6 RETURNING id`
-	return r.db.Raw(query, user.SteamID, user.Nickname, user.AvatarURL, user.ProfileURL, user.CreatedAt, user.UpdatedAt).Scan(user).Error
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		query := `
+			INSERT INTO users (id, steam_id, nickname, avatar_url, profile_url, created_at, updated_at) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7) 
+			ON CONFLICT (steam_id) 
+			DO UPDATE SET nickname = $3, avatar_url = $4, profile_url = $5, updated_at = $7 
+			RETURNING id
+		`
+		if err := tx.Raw(query, user.ID, user.SteamID, user.Nickname, user.AvatarURL, user.ProfileURL, user.CreatedAt, user.UpdatedAt).Scan(user).Error; err != nil {
+			return err
+		}
+
+		statsQuery := `
+			INSERT INTO player_stats (user_id) 
+			VALUES ($1) 
+			ON CONFLICT (user_id) 
+			DO NOTHING
+		`
+		if err := tx.Exec(statsQuery, user.ID).Error; err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 func (r *UserRepository) FindByID(id string) (*domain.User, error) {

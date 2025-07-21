@@ -12,6 +12,12 @@ export const routes = {
     view: (id = ':id') => `/builds/${id}`,
     edit: (id = ':id') => `/builds/${id}/edit`,
   },
+  crosshairs: {
+    list: '/crosshairs',
+    create: '/crosshairs/create',
+    view: (id = ':id') => `/crosshairs/${id}`,
+    edit: (id = ':id') => `/crosshairs/${id}/edit`,
+  },
   auth: {
     steam: API_ENDPOINTS.auth.steamLogin,
     logout: API_ENDPOINTS.auth.logout,

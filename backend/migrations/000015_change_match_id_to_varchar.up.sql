@@ -1,0 +1,8 @@
+ALTER TABLE player_match_stats DROP CONSTRAINT fk_match;
+
+ALTER TABLE matches ALTER COLUMN id DROP DEFAULT;
+
+ALTER TABLE matches ALTER COLUMN id TYPE VARCHAR(255);
+ALTER TABLE player_match_stats ALTER COLUMN match_id TYPE VARCHAR(255);
+
+ALTER TABLE player_match_stats ADD CONSTRAINT fk_match FOREIGN KEY (match_id) REFERENCES matches(id) ON DELETE CASCADE; 

@@ -1,4 +1,3 @@
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/shared/ui/card'
 import type { HeroStat } from '@/entities/player'
 import { Progress } from '@/shared/ui/progress'
@@ -34,10 +33,14 @@ export const HeroStats = ({ heroStats }: HeroStatsProps) => {
         {sortedHeroes.map((hero) => (
           <div key={hero.hero_name}>
             <div className="flex items-center gap-4 mb-2">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={hero.hero_avatar} alt={hero.hero_name} />
-                <AvatarFallback>{hero.hero_name.charAt(0)}</AvatarFallback>
-              </Avatar>
+              <div className="w-10 flex-shrink-0">
+                <img 
+                  src={hero.hero_avatar} 
+                  alt={hero.hero_name} 
+                  className="w-full h-auto rounded-md"
+                  style={{ aspectRatio: '280 / 380' }} 
+                />
+              </div>
               <div className="flex-1">
                 <p className="font-semibold">{hero.hero_name}</p>
                 <p className="text-sm text-muted-foreground">

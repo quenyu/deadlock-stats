@@ -13,6 +13,7 @@ export interface DeadlockCard {
 export interface DeadlockMMR {
   match_id: number
   start_time: number
+  player_score: number
   rank: number
   division: number
   division_tier: number
@@ -35,6 +36,7 @@ export interface MatchRaw {
   sub_rank?: number
   rank_image?: string
   player_rank_change: number
+  player_score?: number
 
   kills?: number
   deaths?: number
@@ -69,6 +71,47 @@ export interface PerformanceDynamics {
   rank: PerformanceTrend
 }
 
+export interface FeaturedHero {
+  hero_id: number
+  hero_name: string
+  hero_image: string
+  kills?: number
+  wins?: number
+  stat_id?: number
+  stat_score?: number
+}
+
+export interface PersonalRecords {
+  max_kills: number
+  max_assists: number
+  max_net_worth: number
+  best_kda: number
+  max_kills_match_id: string
+  max_assists_match_id: string
+  max_net_worth_match_id: string
+  best_kda_match_id: string
+}
+
+export interface MateStat {
+  steam_id: string;
+  nickname: string;
+  avatar_url: string;
+  games: number;
+  wins: number;
+  win_rate: number;
+}
+
+export interface HeroMMRHistory {
+  hero_id: number;
+  hero_name: string;
+  history: {
+    match_id: number;
+    start_time: number;
+    player_score: number;
+    rank: number;
+  }[];
+}
+
 export interface ExtendedPlayerProfileDTO {
   card: DeadlockCard | null
   match_history: MatchRaw[]
@@ -80,7 +123,22 @@ export interface ExtendedPlayerProfileDTO {
   performance_dynamics: PerformanceDynamics
   avg_souls_per_min: number
 
+  player_rank: number
   nickname: string
   avatar_url: string
   rank_image: string
+  rank_name: string
+  sub_rank: number
+  
+  featured_heroes?: FeaturedHero[]
+  peak_rank?: number
+  peak_rank_name?: string
+  peak_rank_image?: string
+  personal_records?: PersonalRecords
+  avg_kills_per_match?: number
+  avg_deaths_per_match?: number
+  avg_assists_per_match?: number
+  avg_match_duration?: number
+  mate_stats?: MateStat[]
+  hero_mmr_history?: HeroMMRHistory[];
 } 

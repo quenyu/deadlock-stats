@@ -14,6 +14,7 @@ export interface Match {
   rank_image: string | undefined;
   match_time: string;
   souls: number;
+  player_score: number;
 }
 
 export interface HeroStat {

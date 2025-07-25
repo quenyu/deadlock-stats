@@ -17,6 +17,10 @@ export const useExtendedProfileStore = create<ExtendedProfileState>((set) => ({
     try {
       set({ loading: true, error: null })
       const data = await fetchExtendedPlayerProfile(steamId)
+      console.log('Full API Response for Extended Player Profile:', data)
+      console.log('--- MMR History Details ---')
+      console.log(data.mmr_history)
+      console.log('---------------------------')
       set({ profile: data, loading: false })
     } catch (err) {
       set({ error: 'Failed to fetch player profile.', loading: false })

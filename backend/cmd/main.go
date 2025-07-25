@@ -71,7 +71,7 @@ func main() {
 	deadlockAPIClient := deadlockapi.NewClient()
 
 	authService := services.NewAuthService(userRepository, cfg, logger)
-	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, deadlockAPIClient, staticDataService, rdb, logger)
+	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, userRepository, authService, deadlockAPIClient, staticDataService, rdb, logger)
 
 	authHandler := handlers.NewAuthHandler(authService, cfg)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
@@ -101,6 +101,7 @@ func main() {
 	v1Group.GET("/players/search", playerProfileHandler.SearchPlayers)
 	v1Group.GET("/players/:steamId", playerProfileHandler.GetPlayerProfileV2)
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)
+	v1Group.GET("/ranks", staticDataService.GetRanksHandler)
 
 	// Logout route
 	authGroup.GET("/logout", authHandler.LogoutHandler)

@@ -1,7 +1,13 @@
 package deadlockapi
 
 type RankImage struct {
-	Large *string `json:"large"`
+	Large         *string `json:"large"`
+	LargeSubrank1 *string `json:"large_subrank1"`
+	LargeSubrank2 *string `json:"large_subrank2"`
+	LargeSubrank3 *string `json:"large_subrank3"`
+	LargeSubrank4 *string `json:"large_subrank4"`
+	LargeSubrank5 *string `json:"large_subrank5"`
+	LargeSubrank6 *string `json:"large_subrank6"`
 }
 
 type RankV2 struct {
@@ -22,10 +28,20 @@ type HeroV2 struct {
 	Images    HeroImages `json:"images"`
 }
 
+type CardHero struct {
+	ID    int `json:"id"`
+	Kills int `json:"kills,omitempty"`
+	Wins  int `json:"wins,omitempty"`
+}
+
+type CardStat struct {
+	StatID    int `json:"stat_id"`
+	StatScore int `json:"stat_score"`
+}
+
 type DeadlockCardSlot struct {
-	Hero struct {
-		ID int `json:"id"`
-	} `json:"hero"`
+	Hero CardHero  `json:"hero"`
+	Stat *CardStat `json:"stat,omitempty"`
 }
 
 type DeadlockCard struct {
@@ -34,15 +50,6 @@ type DeadlockCard struct {
 	RankedRank       *int               `json:"ranked_rank"`
 	RankedSubrank    *int               `json:"ranked_subrank"`
 	Slots            []DeadlockCardSlot `json:"slots"`
-}
-
-type DeadlockMMR struct {
-	MatchID      int64   `json:"match_id"`
-	Rank         int     `json:"rank"`
-	StartTime    int64   `json:"start_time"`
-	PlayerScore  float64 `json:"player_score"`
-	Division     int     `json:"division"`
-	DivisionTier int     `json:"division_tier"`
 }
 
 type DeadlockMatch struct {

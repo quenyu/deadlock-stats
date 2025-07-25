@@ -1,8 +1,10 @@
 import { createBrowserRouter } from 'react-router-dom'
-import { Layout } from '@/widgets/layout'
+import { routes } from '@/shared/constants/routes'
 import { HomePage } from '@/pages/home'
 import { NotFoundPage } from '@/pages/not-found'
-import { routes } from '@/shared/constants/routes'
+import { PlayerProfilePage } from '@/pages/player-profile/PlayerProfilePage'
+import { Layout } from '@/widgets/layout'
+import { SearchPage } from '@/pages/search/SearchPage'
 import { ProtectedRoute } from '@/shared/lib/ProtectedRoute'
 
 // Temporary stub components until features are implemented
@@ -17,16 +19,16 @@ export const router = createBrowserRouter([
     errorElement: <NotFoundPage />,
     children: [
       {
-        index: true,
+        path: routes.home,
         element: <HomePage />,
       },
       {
         path: routes.player.profile(),
-        element: <ComingSoon />,
+        element: <PlayerProfilePage />,
       },
       {
         path: routes.player.search,
-        element: <ComingSoon />,
+        element: <SearchPage />,
       },
       {
         path: routes.builds.list,
@@ -53,6 +55,18 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: routes.crosshairs.list,
+        element: <ComingSoon />,
+      },
+      {
+        path: routes.crosshairs.create,
+        element: (
+          <ProtectedRoute>
+            <ComingSoon />
+          </ProtectedRoute>
+        ),
+      },
+      {
         path: routes.analytics,
         element: <ComingSoon />,
       },
@@ -66,4 +80,4 @@ export const router = createBrowserRouter([
       },
     ],
   },
-]) 
+])

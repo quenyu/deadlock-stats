@@ -18,73 +18,92 @@ func NewAuthHandler(authService *services.AuthService, config *config.Config) *A
 	return &AuthHandler{authService: authService, config: config}
 }
 
-func (s *AuthHandler) LoginHandler(c echo.Context) error {
-	steamAuthURL, err := s.authService.InitiateSteamAuth()
+func (h *AuthHandler) LoginHandler(c echo.Context) error {
+	steamAuthURL, err := h.authService.InitiateSteamAuth()
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to initiate Steam authentication"})
+		return h.handleServiceError(c, "Failed to initiate Steam authentication")
 	}
 	return c.Redirect(http.StatusTemporaryRedirect, steamAuthURL)
 }
 
-func (s *AuthHandler) CallbackHandler(c echo.Context) error {
-	jwtToken, err := s.authService.HandleSteamCallback(c.Request())
+func (h *AuthHandler) CallbackHandler(c echo.Context) error {
+	jwtToken, err := h.authService.HandleSteamCallback(c.Request())
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to handle Steam callback"})
+		return h.handleServiceError(c, "Failed to handle Steam callback")
 	}
 
-	cookie := new(http.Cookie)
-	cookie.Name = "jwt"
-	cookie.Value = jwtToken
-	cookie.Expires = time.Now().Add(s.config.JWT.Expiration)
-	cookie.Path = "/"
-	cookie.HttpOnly = true
-	cookie.SameSite = http.SameSiteLaxMode
-	// You can also set cookie.Domain, cookie.Secure in production
-	c.SetCookie(cookie)
-
+	h.setJWTCookie(c, jwtToken)
 	return c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000/")
 }
 
-// LogoutHandler clears JWT cookie and returns success message
-func (s *AuthHandler) LogoutHandler(c echo.Context) error {
-	cookie := &http.Cookie{
-		Name:     "jwt",
-		Value:    "",
-		Path:     "/",
-		Expires:  time.Unix(0, 0),
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
-	}
-	c.SetCookie(cookie)
-
-	return c.JSON(http.StatusOK, map[string]string{"message": "logged out"})
+func (h *AuthHandler) LogoutHandler(c echo.Context) error {
+	h.clearJWTCookie(c)
+	return c.JSON(http.StatusOK, echo.Map{"message": "logged out"})
 }
 
 func (h *AuthHandler) GetMyProfileHandler(c echo.Context) error {
-	userID, ok := c.Get("userID").(string)
-	if !ok {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Failed to get user ID from context"})
+	userID, err := h.extractUserIDFromContext(c)
+	if err != nil {
+		return err
 	}
 
-	// Here you would call a service to get user details by ID
-	// For now, just return the ID
-	return c.JSON(http.StatusOK, map[string]string{"message": "Authenticated successfully", "userID": userID})
+	return c.JSON(http.StatusOK, echo.Map{"message": "Authenticated successfully", "userID": userID})
 }
 
 func (h *AuthHandler) GetUserMe(c echo.Context) error {
-	userID, ok := c.Get("userID").(string)
-	if !ok || userID == "" {
-		return c.JSON(http.StatusUnauthorized, map[string]string{"error": "Invalid token or user ID not found"})
+	userID, err := h.extractUserIDFromContext(c)
+	if err != nil {
+		return err
 	}
 
 	user, err := h.authService.GetUserByID(userID)
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, map[string]string{"error": "Could not retrieve user"})
+		return h.handleServiceError(c, "Could not retrieve user")
 	}
+
 	if user == nil {
-		return c.JSON(http.StatusNotFound, map[string]string{"error": "User not found"})
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "User not found"})
 	}
 
 	return c.JSON(http.StatusOK, user)
+}
+
+func (h *AuthHandler) extractUserIDFromContext(c echo.Context) (string, error) {
+	userID, ok := c.Get("userID").(string)
+	if !ok || userID == "" {
+		return "", c.JSON(http.StatusUnauthorized, echo.Map{"error": "Invalid token or user ID not found"})
+	}
+	return userID, nil
+}
+
+func (h *AuthHandler) handleServiceError(c echo.Context, message string) error {
+	return c.JSON(http.StatusInternalServerError, echo.Map{"error": message})
+}
+
+func (h *AuthHandler) setJWTCookie(c echo.Context, token string) {
+	cookie := h.createJWTCookie(token, h.config.JWT.Expiration)
+	c.SetCookie(cookie)
+}
+
+func (h *AuthHandler) clearJWTCookie(c echo.Context) {
+	cookie := h.createJWTCookie("", -1)
+	c.SetCookie(cookie)
+}
+
+func (h *AuthHandler) createJWTCookie(value string, expiration time.Duration) *http.Cookie {
+	cookie := new(http.Cookie)
+	cookie.Name = "jwt"
+	cookie.Value = value
+	cookie.Path = "/"
+	cookie.HttpOnly = true
+	cookie.SameSite = http.SameSiteLaxMode
+
+	if expiration > 0 {
+		cookie.Expires = time.Now().Add(expiration)
+	} else {
+		cookie.Expires = time.Unix(0, 0)
+		cookie.MaxAge = -1
+	}
+
+	return cookie
 }

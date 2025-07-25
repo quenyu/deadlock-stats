@@ -18,6 +18,7 @@ export const convertExtendedToPlayerProfile = (dto: ExtendedPlayerProfileDTO): P
     rank_image: m.rank_image,
     match_time: Number.isFinite(m.start_time) && m.start_time > 0 ? new Date(m.start_time * 1000).toISOString() : '',
     souls: m.net_worth,
+    player_score: m.player_score ?? 0,
   }))
 
   const heroStats: HeroStat[] = (dto.hero_stats ?? []).map(h => ({
@@ -40,9 +41,9 @@ export const convertExtendedToPlayerProfile = (dto: ExtendedPlayerProfileDTO): P
     avatar_url: dto.avatar_url,
     last_match_time: recentMatches.length ? recentMatches[0].match_time : '',
     last_updated_at: new Date().toISOString(),
-    player_rank: dto.card?.ranked_rank ?? 0,
-    rank_name: dto.hero_stats.length > 0 ? dto.match_history[0].rank_name : 'Unranked',
-    sub_rank: dto.hero_stats.length > 0 ? dto.match_history[0].sub_rank : 0,
+    player_rank: dto.player_rank,
+    rank_name: dto.rank_name,
+    sub_rank: dto.sub_rank,
     rank_image: dto.rank_image,
     win_rate: dto.win_rate,
     kd_ratio: dto.kd_ratio,

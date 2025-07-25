@@ -8,15 +8,23 @@ import { Button } from '@/shared/ui/button'
 import { AppLink } from '@/shared/ui/AppLink/AppLink'
 import { routes } from '@/shared/constants/routes'
 import React from 'react'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
+import { Label } from '@/shared/ui/label'
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('')
+  const [searchType, setSearchType] = useState('nickname')
   const [results, setResults] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (query.length < 3) {
+    if (searchType === 'nickname' && query.length < 3) {
+      setResults([])
+      setError(null)
+      return
+    }
+    if (query.length === 0) {
       setResults([])
       setError(null)
       return
@@ -26,7 +34,10 @@ export const SearchPage = () => {
       setLoading(true)
       setError(null)
       try {
-        const response = await api.get<User[]>(`/players/search?q=${query}`)
+        const response = await api.get<User[]>(`/players/search?q=${query}&type=${searchType}`)
+
+        console.log("Data received from backend:", response.data);
+
         setResults(response.data)
         if (response.data.length === 0) {
           setError('No players found.')
@@ -41,19 +52,41 @@ export const SearchPage = () => {
 
     const debounceTimeout = setTimeout(fetchResults, 300)
     return () => clearTimeout(debounceTimeout)
-  }, [query])
+  }, [query, searchType])
+
+  console.log(results)
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <div className="max-w-xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-6">Search for Players</h1>
-        <Input
-          type="search"
-          placeholder="Enter player nickname..."
-          value={query}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-          className="h-12 text-lg"
-        />
+        <div className="flex items-end gap-2">
+          <div className="flex-grow">
+            <Label htmlFor="search-input" className="mb-2 block">
+              Player {searchType === 'nickname' ? 'Nickname' : 'SteamID'}
+            </Label>
+            <Input
+              id="search-input"
+              type="search"
+              placeholder={searchType === 'nickname' ? 'Enter nickname...' : 'Enter SteamID...'}
+              value={query}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+              className="h-12 text-lg"
+            />
+          </div>
+          <div className="w-[140px]">
+            <Label className="mb-2 block">Search by</Label>
+            <Select value={searchType} onValueChange={(value) => {setQuery(''); setSearchType(value)}}>
+              <SelectTrigger className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="nickname">Nickname</SelectItem>
+                <SelectItem value="steamid">SteamID</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
       </div>
 
       <div className="mt-8">
@@ -82,4 +115,4 @@ export const SearchPage = () => {
       </div>
     </div>
   )
-} 
+}

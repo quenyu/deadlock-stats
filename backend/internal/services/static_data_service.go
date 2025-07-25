@@ -3,9 +3,11 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"sync"
 
+	"github.com/labstack/echo/v4"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"go.uber.org/zap"
 )
@@ -65,46 +67,77 @@ func (s *StaticDataService) LoadStaticData() error {
 }
 
 func (s *StaticDataService) loadRanks() error {
-	resp, err := http.Get(ranksURL)
+	data, err := s.fetchDataFromURL(ranksURL)
 	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	var ranks []deadlockapi.RankV2
-	if err := json.NewDecoder(resp.Body).Decode(&ranks); err != nil {
-		return err
+		return fmt.Errorf("failed to fetch ranks: %w", err)
 	}
 
-	s.mx.Lock()
-	defer s.mx.Unlock()
-	for _, rank := range ranks {
-		s.Ranks[rank.Tier] = rank
-	}
-	s.logger.Info("Successfully loaded ranks", zap.Int("count", len(s.Ranks)))
-	return nil
+	return s.parseAndStoreRanks(data)
 }
 
 func (s *StaticDataService) loadHeroes() error {
-	resp, err := http.Get(heroesURL)
+	data, err := s.fetchDataFromURL(heroesURL)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to fetch heroes: %w", err)
+	}
+
+	return s.parseAndStoreHeroes(data)
+}
+
+func (s *StaticDataService) fetchDataFromURL(url string) ([]byte, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch data from %s: %w", url, err)
 	}
 	defer resp.Body.Close()
 
-	var heroes []deadlockapi.HeroV2
-	if err := json.NewDecoder(resp.Body).Decode(&heroes); err != nil {
-		return err
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("received non-OK status code %d from %s", resp.StatusCode, url)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body from %s: %w", url, err)
+	}
+
+	return data, nil
+}
+
+func (s *StaticDataService) parseAndStoreRanks(data []byte) error {
+	var ranks []deadlockapi.RankV2
+	if err := json.Unmarshal(data, &ranks); err != nil {
+		return fmt.Errorf("failed to decode ranks JSON: %w", err)
 	}
 
 	s.mx.Lock()
 	defer s.mx.Unlock()
+
+	for _, rank := range ranks {
+		s.Ranks[rank.Tier] = rank
+	}
+
+	s.logger.Info("Successfully loaded ranks from API", zap.Int("count", len(s.Ranks)))
+	return nil
+}
+
+func (s *StaticDataService) parseAndStoreHeroes(data []byte) error {
+	var heroes []deadlockapi.HeroV2
+	if err := json.Unmarshal(data, &heroes); err != nil {
+		return fmt.Errorf("failed to decode heroes JSON: %w", err)
+	}
+
+	s.mx.Lock()
+	defer s.mx.Unlock()
+
 	for _, hero := range heroes {
 		s.Heroes[hero.ClassName] = hero
 		s.HeroesByHeroID[hero.ID] = hero
-		key := fmt.Sprintf("HeroID_%d", hero.ID)
-		s.Heroes[key] = hero
 	}
+
 	s.logger.Info("Successfully loaded heroes", zap.Int("count", len(s.Heroes)))
 	return nil
+}
+
+func (s *StaticDataService) GetRanksHandler(c echo.Context) error {
+	return c.JSON(http.StatusOK, s.Ranks)
 }

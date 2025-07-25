@@ -16,9 +16,33 @@ type Client struct {
 }
 
 func NewClient() *Client {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  false,
+	}
+
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: 15 * time.Second,
+			Timeout:   15 * time.Second,
+			Transport: transport,
+		},
+	}
+}
+
+func NewClientWithCustomTimeout(timeout time.Duration) *Client {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  false,
+	}
+
+	return &Client{
+		httpClient: &http.Client{
+			Timeout:   timeout,
+			Transport: transport,
 		},
 	}
 }
@@ -26,7 +50,7 @@ func NewClient() *Client {
 func (c *Client) FetchPlayerCard(steamID string) (*DeadlockCard, error) {
 	url := fmt.Sprintf("%s/players/%s/card", baseURL, steamID)
 	var card DeadlockCard
-	err := c.doRequest(url, &card)
+	err := c.doRequestWithRetry(url, &card, 3)
 	return &card, err
 }
 
@@ -34,7 +58,7 @@ func (c *Client) FetchMatchHistory(steamID string) ([]DeadlockMatch, error) {
 	url := fmt.Sprintf("%s/players/%s/match-history", baseURL, steamID)
 
 	var apiMatches []DeadlockMatch
-	if err := c.doRequest(url, &apiMatches); err != nil {
+	if err := c.doRequestWithRetry(url, &apiMatches, 2); err != nil {
 		return nil, err
 	}
 
@@ -156,6 +180,28 @@ func (c *Client) doRequest(url string, target interface{}) error {
 	}
 
 	return c.decodeResponse(resp, target)
+}
+
+func (c *Client) doRequestWithRetry(url string, target interface{}, maxRetries int) error {
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := c.doRequest(url, target)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+
+		if attempt == maxRetries {
+			break
+		}
+
+		backoff := time.Duration(100*(1<<attempt)) * time.Millisecond
+		time.Sleep(backoff)
+	}
+
+	return fmt.Errorf("request failed after %d attempts: %w", maxRetries+1, lastErr)
 }
 
 func (c *Client) createRequest(url string) (*http.Request, error) {

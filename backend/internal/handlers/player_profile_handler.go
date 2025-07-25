@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/quenyu/deadlock-stats/internal/services"
@@ -69,6 +70,35 @@ func (h *PlayerProfileHandler) SearchPlayers(c echo.Context) error {
 	}
 
 	return c.JSON(http.StatusOK, users)
+}
+
+func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error {
+	steamID, err := h.validateSteamIDParam(c)
+	if err != nil {
+		return err
+	}
+
+	start := time.Now()
+	profile, err := h.service.GetExtendedPlayerProfile(c.Request().Context(), steamID)
+	loadTime := time.Since(start)
+
+	if err != nil {
+		return h.handleServiceError(c, err)
+	}
+
+	if profile == nil {
+		return c.JSON(http.StatusNotFound, echo.Map{"error": "Player not found"})
+	}
+
+	response := echo.Map{
+		"profile": profile,
+		"metrics": echo.Map{
+			"load_time_ms": loadTime.Milliseconds(),
+			"cache_hit":    profile.LastUpdatedAt.IsZero(),
+		},
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *PlayerProfileHandler) validateSteamIDParam(c echo.Context) (string, error) {

@@ -27,3 +27,13 @@ steam:
 jwt:
   secret: "change-me-in-production"
   expiration: 24h 
+
+api:
+  timeout: 10s
+  max_retries: 3
+  connection_pool: 100
+  idle_conn_timeout: 90s
+  cache_ttl: 30m
+  partial_cache_ttl: 1h
+  enable_metrics: true
+  enable_retry: true 

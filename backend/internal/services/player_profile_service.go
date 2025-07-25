@@ -61,10 +61,74 @@ func (s *PlayerProfileService) fetchFromCacheOrAPI(ctx context.Context, steamID 
 	}
 
 	s.logger.Info("cache miss for player profile", zap.String("steamID", steamID))
-	return s.fetchAndBuildProfile(ctx, steamID, cacheKey)
+
+	partialProfile := s.tryGetPartialCache(ctx, steamID)
+
+	fullProfile, err := s.fetchAndBuildProfile(ctx, steamID, cacheKey)
+	if err != nil {
+		if partialProfile != nil {
+			s.logger.Warn("Using partial cached profile due to API error", zap.String("steamID", steamID), zap.Error(err))
+			return partialProfile, nil
+		}
+		return nil, err
+	}
+
+	s.cacheProfile(ctx, cacheKey, fullProfile)
+
+	s.updatePartialCache(ctx, steamID, fullProfile)
+
+	return fullProfile, nil
+}
+
+func (s *PlayerProfileService) tryGetPartialCache(ctx context.Context, steamID string) *dto.ExtendedPlayerProfile {
+	partialCacheKey := fmt.Sprintf("player-profile-partial:%s", steamID)
+
+	val, err := s.redisClient.Get(ctx, partialCacheKey).Result()
+	if err != nil {
+		return nil
+	}
+
+	var profile dto.ExtendedPlayerProfile
+	if err := json.Unmarshal([]byte(val), &profile); err == nil {
+		if time.Since(profile.LastUpdatedAt) < time.Hour {
+			s.logger.Info("using partial cache", zap.String("steamID", steamID))
+			return &profile
+		}
+	}
+
+	return nil
+}
+
+func (s *PlayerProfileService) updatePartialCache(ctx context.Context, steamID string, profile *dto.ExtendedPlayerProfile) {
+	partialCacheKey := fmt.Sprintf("player-profile-partial:%s", steamID)
+
+	partialProfile := &dto.ExtendedPlayerProfile{
+		Card:          profile.Card,
+		Nickname:      profile.Nickname,
+		AvatarURL:     profile.AvatarURL,
+		PlayerRank:    profile.PlayerRank,
+		RankName:      profile.RankName,
+		RankImage:     profile.RankImage,
+		TotalMatches:  profile.TotalMatches,
+		WinRate:       profile.WinRate,
+		KDRatio:       profile.KDRatio,
+		LastUpdatedAt: time.Now(),
+	}
+
+	data, err := json.Marshal(partialProfile)
+	if err == nil {
+		s.redisClient.Set(ctx, partialCacheKey, data, time.Hour).Err()
+	}
 }
 
 func (s *PlayerProfileService) fetchAndBuildProfile(ctx context.Context, steamID, cacheKey string) (*dto.ExtendedPlayerProfile, error) {
+	start := time.Now()
+	defer func() {
+		s.logger.Debug("Profile building completed",
+			zap.String("steamID", steamID),
+			zap.Duration("buildTime", time.Since(start)))
+	}()
+
 	card, matches, heroStats, mmrHistory, profile, heroMMRHistory, err := s.fetchAllData(ctx, steamID)
 	if err != nil {
 		return nil, err
@@ -86,6 +150,9 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	[]domain.HeroMMRHistory,
 	error,
 ) {
+	apiCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
 	var card *deadlockapi.DeadlockCard
 	var matches []deadlockapi.DeadlockMatch
 	var heroStats []domain.HeroStat
@@ -138,9 +205,7 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	close(errs)
 
 	for err := range errs {
-		if err != nil {
-			s.logger.Warn("Failed to fetch some data from Deadlock API", zap.Error(err))
-		}
+		s.logger.Warn("Failed to fetch some data from Deadlock API", zap.Error(err))
 	}
 
 	if card == nil || matches == nil || heroStats == nil {
@@ -151,14 +216,36 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 		profile = &domain.PlayerProfile{SteamID: steamID}
 	}
 
-	heroStats = s.processHeroStats(heroStats)
-	heroMMRHistory = s.fetchHeroMMRHistory(steamID, heroStats)
+	var processWg sync.WaitGroup
+	processWg.Add(2)
 
-	sort.SliceStable(mmrHistory, func(i, j int) bool {
-		return mmrHistory[i].StartTime > mmrHistory[j].StartTime
-	})
+	go func() {
+		defer processWg.Done()
+		heroStats = s.processHeroStats(heroStats)
+	}()
+
+	go func() {
+		defer processWg.Done()
+		sort.SliceStable(mmrHistory, func(i, j int) bool {
+			return mmrHistory[i].StartTime > mmrHistory[j].StartTime
+		})
+	}()
+
+	processWg.Wait()
+
+	heroMMRHistory = s.fetchHeroMMRHistoryWithTimeout(apiCtx, steamID, heroStats)
 
 	return card, matches, heroStats, mmrHistory, profile, heroMMRHistory, nil
+}
+
+func (s *PlayerProfileService) fetchHeroMMRHistoryWithTimeout(ctx context.Context, steamID string, heroStats []domain.HeroStat) []domain.HeroMMRHistory {
+	select {
+	case <-ctx.Done():
+		s.logger.Info("Skipping hero MMR history due to timeout", zap.String("steamID", steamID))
+		return []domain.HeroMMRHistory{}
+	default:
+		return s.fetchHeroMMRHistory(steamID, heroStats)
+	}
 }
 
 func (s *PlayerProfileService) processHeroStats(heroStats []domain.HeroStat) []domain.HeroStat {
@@ -268,6 +355,7 @@ func (s *PlayerProfileService) buildExtendedProfile(
 		AvgMatchDuration:    avgStats.AvgDuration,
 		MateStats:           validMateStats,
 		HeroMMRHistory:      dtoHeroMMR,
+		LastUpdatedAt:       time.Now(),
 	}
 }
 
@@ -338,7 +426,29 @@ func (s *PlayerProfileService) buildMateStats(card *deadlockapi.DeadlockCard) []
 // GetExtendedPlayerProfile retrieves comprehensive player profile data including match history,
 // hero statistics, MMR history, and personal records. Data is cached in Redis for performance.
 func (s *PlayerProfileService) GetExtendedPlayerProfile(ctx context.Context, steamID string) (*dto.ExtendedPlayerProfile, error) {
-	return s.fetchFromCacheOrAPI(ctx, steamID)
+	start := time.Now()
+	defer func() {
+		s.logger.Info("Profile loading completed",
+			zap.String("steamID", steamID),
+			zap.Duration("totalTime", time.Since(start)))
+	}()
+
+	profile, err := s.fetchFromCacheOrAPI(ctx, steamID)
+	if err != nil {
+		s.logger.Error("Failed to load profile",
+			zap.String("steamID", steamID),
+			zap.Error(err),
+			zap.Duration("totalTime", time.Since(start)))
+		return nil, err
+	}
+
+	s.logger.Info("Profile loaded successfully",
+		zap.String("steamID", steamID),
+		zap.Duration("totalTime", time.Since(start)),
+		zap.Int("totalMatches", profile.TotalMatches),
+		zap.Int("heroStatsCount", len(profile.HeroStats)))
+
+	return profile, nil
 }
 
 func (s *PlayerProfileService) buildDomainMatches(matches []deadlockapi.DeadlockMatch, mmrHistory []domain.DeadlockMMR) []domain.Match {

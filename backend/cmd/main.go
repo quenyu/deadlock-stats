@@ -68,7 +68,12 @@ func main() {
 
 	userRepository := repositories.NewUserRepository(db)
 	playerProfileRepository := repositories.NewPlayerProfilePostgresRepository(db)
-	deadlockAPIClient := deadlockapi.NewClient()
+	var deadlockAPIClient *deadlockapi.Client
+	if cfg.API.EnableRetry {
+		deadlockAPIClient = deadlockapi.NewClientWithCustomTimeout(cfg.API.Timeout)
+	} else {
+		deadlockAPIClient = deadlockapi.NewClient()
+	}
 
 	authService := services.NewAuthService(userRepository, cfg, logger)
 	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, userRepository, authService, deadlockAPIClient, staticDataService, rdb, logger)
@@ -100,6 +105,7 @@ func main() {
 
 	v1Group.GET("/players/search", playerProfileHandler.SearchPlayers)
 	v1Group.GET("/players/:steamId", playerProfileHandler.GetPlayerProfileV2)
+	v1Group.GET("/players/:steamId/metrics", playerProfileHandler.GetPlayerProfileWithMetrics)
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)
 	v1Group.GET("/ranks", staticDataService.GetRanksHandler)
 

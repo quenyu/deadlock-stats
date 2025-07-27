@@ -24,7 +24,7 @@ export const PlayerInfoCard = ({ profile }: PlayerInfoCardProps) => {
         <div className="flex items-center gap-4">
           <Avatar className="h-24 w-24 border-4 border-primary/10">
             <AvatarImage src={profile.avatar_url} alt={profile.nickname} />
-            <AvatarFallback>{profile.nickname?.charAt(0) || "?"}</AvatarFallback>
+            <AvatarFallback>{profile.nickname ? profile.nickname.charAt(0) : "?"}</AvatarFallback>
           </Avatar>
           <div>
             <h1 className="text-3xl font-bold">{profile.nickname}</h1>
@@ -48,7 +48,7 @@ export const PlayerInfoCard = ({ profile }: PlayerInfoCardProps) => {
               <img 
                 src={profile.peak_rank_image} 
                 alt={profile.peak_rank_name} 
-                className="h-12 w-12" 
+                className="h-12" 
               />
             )}
             <span className="text-lg font-semibold">{profile.peak_rank_name}</span>

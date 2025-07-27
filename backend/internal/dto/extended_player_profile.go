@@ -1,12 +1,12 @@
 package dto
 
 import (
-	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
+	"time"
+
 	"github.com/quenyu/deadlock-stats/internal/domain"
 )
 
 type ExtendedPlayerProfile struct {
-	Card                *deadlockapi.DeadlockCard  `json:"card"`
 	MatchHistory        []domain.Match             `json:"match_history"`
 	HeroStats           []domain.HeroStat          `json:"hero_stats"`
 	MMRHistory          []domain.DeadlockMMR       `json:"mmr_history"`
@@ -34,4 +34,5 @@ type ExtendedPlayerProfile struct {
 	AvgMatchDuration   float64                 `json:"avg_match_duration"`
 	MateStats          []domain.MateStat       `json:"mate_stats"`
 	HeroMMRHistory     []domain.HeroMMRHistory `json:"hero_mmr_history"`
+	LastUpdatedAt      time.Time               `json:"last_updated_at"`
 }

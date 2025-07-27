@@ -11,6 +11,7 @@ type Match struct {
 	NetWorth             int       `json:"net_worth"`
 	MatchDurationS       int       `json:"match_duration_s"`
 	MatchResult          int       `json:"match_result"`
+	PlayerTeam           int       `json:"player_team"`
 	StartTime            int64     `json:"start_time"`
 	HeroName             string    `json:"hero_name"`
 	HeroAvatar           string    `json:"hero_avatar,omitempty"`

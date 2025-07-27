@@ -9,10 +9,22 @@ import (
 type Config struct {
 	Server   ServerConfig   `mapstructure:"server"`
 	Database DatabaseConfig `mapstructure:"database"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	Steam    SteamConfig    `mapstructure:"steam"`
-	App      AppConfig      `mapstructure:"app"`
 	Redis    RedisConfig    `mapstructure:"redis"`
+	Steam    SteamConfig    `mapstructure:"steam"`
+	JWT      JWTConfig      `mapstructure:"jwt"`
+	App      AppConfig      `mapstructure:"app"`
+	API      APIConfig      `mapstructure:"api"`
+}
+
+type APIConfig struct {
+	Timeout         time.Duration `mapstructure:"timeout"`
+	MaxRetries      int           `mapstructure:"max_retries"`
+	ConnectionPool  int           `mapstructure:"connection_pool"`
+	IdleConnTimeout time.Duration `mapstructure:"idle_conn_timeout"`
+	CacheTTL        time.Duration `mapstructure:"cache_ttl"`
+	PartialCacheTTL time.Duration `mapstructure:"partial_cache_ttl"`
+	EnableMetrics   bool          `mapstructure:"enable_metrics"`
+	EnableRetry     bool          `mapstructure:"enable_retry"`
 }
 
 type AppConfig struct {

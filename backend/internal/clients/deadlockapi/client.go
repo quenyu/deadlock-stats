@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/quenyu/deadlock-stats/internal/domain"
@@ -16,25 +17,42 @@ type Client struct {
 }
 
 func NewClient() *Client {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  false,
+	}
+
 	return &Client{
 		httpClient: &http.Client{
-			Timeout: 15 * time.Second,
+			Timeout:   15 * time.Second,
+			Transport: transport,
 		},
 	}
 }
 
-func (c *Client) FetchPlayerCard(steamID string) (*DeadlockCard, error) {
-	url := fmt.Sprintf("%s/players/%s/card", baseURL, steamID)
-	var card DeadlockCard
-	err := c.doRequest(url, &card)
-	return &card, err
+func NewClientWithCustomTimeout(timeout time.Duration) *Client {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 10,
+		IdleConnTimeout:     90 * time.Second,
+		DisableCompression:  false,
+	}
+
+	return &Client{
+		httpClient: &http.Client{
+			Timeout:   timeout,
+			Transport: transport,
+		},
+	}
 }
 
 func (c *Client) FetchMatchHistory(steamID string) ([]DeadlockMatch, error) {
 	url := fmt.Sprintf("%s/players/%s/match-history", baseURL, steamID)
 
 	var apiMatches []DeadlockMatch
-	if err := c.doRequest(url, &apiMatches); err != nil {
+	if err := c.doRequestWithRetry(url, &apiMatches, 2); err != nil {
 		return nil, err
 	}
 
@@ -133,9 +151,10 @@ func (c *Client) FetchLiteProfile(steamID string) (*domain.PlayerProfile, error)
 }
 
 func (c *Client) FetchSteamProfileSearch(query string) ([]domain.SteamProfileSearch, error) {
-	url := fmt.Sprintf("%s/players/steam-search?search_query=%s", baseURL, query)
+	encodedQuery := url.QueryEscape(query)
+	url := fmt.Sprintf("%s/players/steam-search?search_query=%s", baseURL, encodedQuery)
 	var profileSearch []domain.SteamProfileSearch
-	err := c.doRequest(url, &profileSearch)
+	err := c.doRequestWithRetry(url, &profileSearch, 2)
 	return profileSearch, err
 }
 
@@ -156,6 +175,28 @@ func (c *Client) doRequest(url string, target interface{}) error {
 	}
 
 	return c.decodeResponse(resp, target)
+}
+
+func (c *Client) doRequestWithRetry(url string, target interface{}, maxRetries int) error {
+	var lastErr error
+
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		err := c.doRequest(url, target)
+		if err == nil {
+			return nil
+		}
+
+		lastErr = err
+
+		if attempt == maxRetries {
+			break
+		}
+
+		backoff := time.Duration(100*(1<<attempt)) * time.Millisecond
+		time.Sleep(backoff)
+	}
+
+	return fmt.Errorf("request failed after %d attempts: %w", maxRetries+1, lastErr)
 }
 
 func (c *Client) createRequest(url string) (*http.Request, error) {

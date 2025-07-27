@@ -1,15 +1,3 @@
-export interface DeadlockCardSlot {
-  hero: { id: number | null }
-}
-
-export interface DeadlockCard {
-  account_id: number | null
-  ranked_badge_level: number | null
-  ranked_rank: number | null
-  ranked_subrank: number | null
-  slots: DeadlockCardSlot[]
-}
-
 export interface DeadlockMMR {
   match_id: number
   start_time: number
@@ -113,7 +101,6 @@ export interface HeroMMRHistory {
 }
 
 export interface ExtendedPlayerProfileDTO {
-  card: DeadlockCard | null
   match_history: MatchRaw[]
   hero_stats: HeroStatRaw[]
   mmr_history: DeadlockMMR[]

@@ -43,7 +43,7 @@ export const RankHistoryChart = ({ rankHistory }: RankHistoryChartProps) => {
   }
 
   const data = rankHistory.map(point => ({
-    name: new Date(point.timestamp).toLocaleDateString(),
+    name: point.timestamp ? new Date(point.timestamp).toLocaleDateString() : 'Unknown',
     Rank: point.rank,
     rankName: point.rank_name,
     subRank: point.sub_rank,

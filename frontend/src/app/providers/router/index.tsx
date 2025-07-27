@@ -4,8 +4,8 @@ import { HomePage } from '@/pages/home'
 import { NotFoundPage } from '@/pages/not-found'
 import { PlayerProfilePage } from '@/pages/player-profile/PlayerProfilePage'
 import { Layout } from '@/widgets/layout'
-import { SearchPage } from '@/pages/search/SearchPage'
 import { ProtectedRoute } from '@/shared/lib/ProtectedRoute'
+import { PlayerSearchPage } from '@/pages/search/PlayerSearchPage'
 
 // Temporary stub components until features are implemented
 const ComingSoon = () => <div className="p-8 text-center text-muted-foreground">Coming soon...</div>
@@ -28,7 +28,7 @@ export const router = createBrowserRouter([
       },
       {
         path: routes.player.search,
-        element: <SearchPage />,
+        element: <PlayerSearchPage />,
       },
       {
         path: routes.builds.list,

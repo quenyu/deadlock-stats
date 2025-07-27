@@ -43,13 +43,13 @@ export const RecentMatchesTimeline = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-          {matches.map((match) => (
+          {Array.isArray(matches) && matches.map((match) => (
             <div key={match.id} className="flex items-center gap-4">
               <HeroIcon name={match.hero_name} />
               <div className="flex-grow">
                 <div className="flex justify-between items-center">
                   <p className="font-semibold">{match.hero_name} - <span className={match.result === 'Win' ? 'text-green-500' : 'text-red-500'}>{match.result}</span></p>
-                  <p className="text-xs text-muted-foreground">{formatDistanceToNow(new Date(match.match_time))} ago</p>
+                  <p className="text-xs text-muted-foreground">{match.match_time ? formatDistanceToNow(new Date(match.match_time)) + ' ago' : 'Unknown time'}</p>
                 </div>
                 <p className="text-sm text-muted-foreground">{match.player_kills}/{match.player_deaths}/{match.player_assists} - {match.match_duration_s} min</p>
               </div>

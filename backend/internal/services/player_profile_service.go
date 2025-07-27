@@ -55,12 +55,12 @@ func (s *PlayerProfileService) fetchFromCacheOrAPI(ctx context.Context, steamID 
 	if err == nil {
 		var profile dto.ExtendedPlayerProfile
 		if err := json.Unmarshal([]byte(val), &profile); err == nil {
-			s.logger.Info("cache hit for player profile", zap.String("steamID", steamID))
+			s.logger.Info("Cache hit for player profile", zap.String("steamID", steamID))
 			return &profile, nil
 		}
 	}
 
-	s.logger.Info("cache miss for player profile", zap.String("steamID", steamID))
+	s.logger.Info("Cache miss for player profile", zap.String("steamID", steamID))
 
 	partialProfile := s.tryGetPartialCache(ctx, steamID)
 
@@ -85,15 +85,20 @@ func (s *PlayerProfileService) tryGetPartialCache(ctx context.Context, steamID s
 
 	val, err := s.redisClient.Get(ctx, partialCacheKey).Result()
 	if err != nil {
+		s.logger.Debug("No partial cache found", zap.String("steamID", steamID))
 		return nil
 	}
 
 	var profile dto.ExtendedPlayerProfile
 	if err := json.Unmarshal([]byte(val), &profile); err == nil {
 		if time.Since(profile.LastUpdatedAt) < time.Hour {
-			s.logger.Info("using partial cache", zap.String("steamID", steamID))
+			s.logger.Info("Using partial cache", zap.String("steamID", steamID))
 			return &profile
+		} else {
+			s.logger.Debug("Partial cache expired", zap.String("steamID", steamID))
 		}
+	} else {
+		s.logger.Warn("Failed to unmarshal partial cache", zap.String("steamID", steamID), zap.Error(err))
 	}
 
 	return nil
@@ -103,16 +108,16 @@ func (s *PlayerProfileService) updatePartialCache(ctx context.Context, steamID s
 	partialCacheKey := fmt.Sprintf("player-profile-partial:%s", steamID)
 
 	partialProfile := &dto.ExtendedPlayerProfile{
-		Card:          profile.Card,
-		Nickname:      profile.Nickname,
-		AvatarURL:     profile.AvatarURL,
-		PlayerRank:    profile.PlayerRank,
-		RankName:      profile.RankName,
-		RankImage:     profile.RankImage,
-		TotalMatches:  profile.TotalMatches,
-		WinRate:       profile.WinRate,
-		KDRatio:       profile.KDRatio,
-		LastUpdatedAt: time.Now(),
+		Nickname:            profile.Nickname,
+		AvatarURL:           profile.AvatarURL,
+		PlayerRank:          profile.PlayerRank,
+		RankName:            profile.RankName,
+		RankImage:           profile.RankImage,
+		TotalMatches:        profile.TotalMatches,
+		WinRate:             profile.WinRate,
+		KDRatio:             profile.KDRatio,
+		PerformanceDynamics: profile.PerformanceDynamics,
+		LastUpdatedAt:       time.Now(),
 	}
 
 	data, err := json.Marshal(partialProfile)
@@ -129,12 +134,12 @@ func (s *PlayerProfileService) fetchAndBuildProfile(ctx context.Context, steamID
 			zap.Duration("buildTime", time.Since(start)))
 	}()
 
-	card, matches, heroStats, mmrHistory, profile, heroMMRHistory, err := s.fetchAllData(ctx, steamID)
+	matches, heroStats, mmrHistory, profile, heroMMRHistory, err := s.fetchAllData(ctx, steamID)
 	if err != nil {
 		return nil, err
 	}
 
-	extendedProfile := s.buildExtendedProfile(card, matches, heroStats, mmrHistory, profile, heroMMRHistory)
+	extendedProfile := s.buildExtendedProfile(matches, heroStats, mmrHistory, profile, heroMMRHistory)
 
 	s.cacheProfile(ctx, cacheKey, extendedProfile)
 
@@ -142,7 +147,6 @@ func (s *PlayerProfileService) fetchAndBuildProfile(ctx context.Context, steamID
 }
 
 func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string) (
-	*deadlockapi.DeadlockCard,
 	[]deadlockapi.DeadlockMatch,
 	[]domain.HeroStat,
 	[]domain.DeadlockMMR,
@@ -153,7 +157,6 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	apiCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	var card *deadlockapi.DeadlockCard
 	var matches []deadlockapi.DeadlockMatch
 	var heroStats []domain.HeroStat
 	var mmrHistory []domain.DeadlockMMR
@@ -161,9 +164,9 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	var heroMMRHistory []domain.HeroMMRHistory
 
 	var wg sync.WaitGroup
-	errs := make(chan error, 5)
+	errs := make(chan error, 4)
 
-	wg.Add(5)
+	wg.Add(4)
 	go func() {
 		defer wg.Done()
 		profile, _ = s.playerProfileRepository.FindBySteamID(ctx, steamID)
@@ -171,17 +174,14 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	go func() {
 		defer wg.Done()
 		var err error
-		card, err = s.deadlockAPIClient.FetchPlayerCard(steamID)
-		if err != nil {
-			errs <- err
-		}
-	}()
-	go func() {
-		defer wg.Done()
-		var err error
+		s.logger.Info("Fetching match history from API", zap.String("steamID", steamID))
 		matches, err = s.deadlockAPIClient.FetchMatchHistory(steamID)
 		if err != nil {
+			s.logger.Error("Failed to fetch match history", zap.String("steamID", steamID), zap.Error(err))
 			errs <- err
+			matches = []deadlockapi.DeadlockMatch{}
+		} else {
+			s.logger.Info("Successfully fetched match history", zap.String("steamID", steamID), zap.Int("matchesCount", len(matches)))
 		}
 	}()
 	go func() {
@@ -190,6 +190,7 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 		heroStats, err = s.deadlockAPIClient.FetchHeroStats(steamID)
 		if err != nil {
 			errs <- err
+			heroStats = []domain.HeroStat{}
 		}
 	}()
 	go func() {
@@ -198,6 +199,7 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 		mmrHistory, err = s.deadlockAPIClient.FetchMMRHistory(steamID)
 		if err != nil {
 			errs <- err
+			mmrHistory = []domain.DeadlockMMR{}
 		}
 	}()
 
@@ -208,12 +210,28 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 		s.logger.Warn("Failed to fetch some data from Deadlock API", zap.Error(err))
 	}
 
-	if card == nil || matches == nil || heroStats == nil {
-		return nil, nil, nil, nil, nil, nil, fmt.Errorf("critical data could not be fetched (card, matches, or hero stats)")
+	if len(matches) == 0 && len(heroStats) == 0 {
+		return nil, nil, nil, nil, nil, fmt.Errorf("critical data could not be fetched (matches or hero stats)")
 	}
 
 	if profile == nil {
-		profile = &domain.PlayerProfile{SteamID: steamID}
+		steamProfiles, err := s.deadlockAPIClient.FetchSteamProfileSearch(steamID)
+		if err != nil || len(steamProfiles) == 0 {
+			profile = &domain.PlayerProfile{
+				SteamID:    steamID,
+				Nickname:   "Unknown Player",
+				AvatarURL:  "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg",
+				ProfileURL: fmt.Sprintf("https://steamcommunity.com/profiles/%s", steamID),
+			}
+		} else {
+			apiProfile := steamProfiles[0]
+			profile = &domain.PlayerProfile{
+				SteamID:    steamID,
+				Nickname:   apiProfile.Personaname,
+				AvatarURL:  apiProfile.Avatar,
+				ProfileURL: apiProfile.Profileurl,
+			}
+		}
 	}
 
 	var processWg sync.WaitGroup
@@ -235,7 +253,7 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 
 	heroMMRHistory = s.fetchHeroMMRHistoryWithTimeout(apiCtx, steamID, heroStats)
 
-	return card, matches, heroStats, mmrHistory, profile, heroMMRHistory, nil
+	return matches, heroStats, mmrHistory, profile, heroMMRHistory, nil
 }
 
 func (s *PlayerProfileService) fetchHeroMMRHistoryWithTimeout(ctx context.Context, steamID string, heroStats []domain.HeroStat) []domain.HeroMMRHistory {
@@ -303,33 +321,36 @@ func (s *PlayerProfileService) fetchHeroMMRHistory(steamID string, heroStats []d
 }
 
 func (s *PlayerProfileService) buildExtendedProfile(
-	card *deadlockapi.DeadlockCard,
 	matches []deadlockapi.DeadlockMatch,
 	heroStats []domain.HeroStat,
 	mmrHistory []domain.DeadlockMMR,
 	profile *domain.PlayerProfile,
 	heroMMRHistory []domain.HeroMMRHistory,
 ) *dto.ExtendedPlayerProfile {
-	if card == nil {
-		return nil
-	}
+	s.logger.Info("Building extended profile",
+		zap.Int("apiMatchesCount", len(matches)),
+		zap.Int("heroStatsCount", len(heroStats)),
+		zap.Int("mmrHistoryCount", len(mmrHistory)))
 
 	domainMatches := s.buildDomainMatches(matches, mmrHistory)
-	s.calculateAndFillStats(profile, card, domainMatches, mmrHistory)
+	s.logger.Info("Domain matches built", zap.Int("domainMatchesCount", len(domainMatches)))
 
-	featuredHeroes := s.enrichFeaturedHeroes(card)
+	s.calculateAndFillStats(profile, domainMatches, mmrHistory)
+
+	featuredHeroes := []domain.FeaturedHero{}
 	peakRank, peakRankName, peakRankImage := domain.FindPeakRank(mmrHistory, s.getRankNameAndSubRank, s.getRankImageURL)
 	personalRecords := domain.CalculatePersonalRecords(domainMatches)
 	avgStats := domain.CalculateAverageStats(domainMatches, len(matches))
 
-	validMateStats := s.buildMateStats(card)
+	validMateStats := []domain.MateStat{}
 
 	dtoRecords := s.buildPersonalRecordsDTO(personalRecords)
 	dtoMMRHistory := s.buildMMRHistoryDTO(mmrHistory)
 	dtoHeroMMR := s.buildHeroMMRHistoryDTO(heroMMRHistory)
 
+	s.logger.Info("Building DTO with performance dynamics")
+
 	return &dto.ExtendedPlayerProfile{
-		Card:                card,
 		MatchHistory:        domainMatches,
 		HeroStats:           heroStats,
 		MMRHistory:          dtoMMRHistory,
@@ -363,6 +384,9 @@ func (s *PlayerProfileService) cacheProfile(ctx context.Context, cacheKey string
 	data, err := json.Marshal(profile)
 	if err == nil {
 		s.redisClient.Set(ctx, cacheKey, data, time.Hour).Err()
+		s.logger.Debug("Cached profile", zap.String("cacheKey", cacheKey))
+	} else {
+		s.logger.Warn("Failed to marshal profile for caching", zap.Error(err))
 	}
 }
 
@@ -417,7 +441,7 @@ func (s *PlayerProfileService) buildHeroMMRHistoryDTO(heroMMRHistory []domain.He
 	return dtoHeroMMR
 }
 
-func (s *PlayerProfileService) buildMateStats(card *deadlockapi.DeadlockCard) []domain.MateStat {
+func (s *PlayerProfileService) buildMateStats() []domain.MateStat {
 	// This method would contain the logic for fetching mate stats
 	// For now, returning empty slice as placeholder
 	return []domain.MateStat{}
@@ -452,10 +476,14 @@ func (s *PlayerProfileService) GetExtendedPlayerProfile(ctx context.Context, ste
 }
 
 func (s *PlayerProfileService) buildDomainMatches(matches []deadlockapi.DeadlockMatch, mmrHistory []domain.DeadlockMMR) []domain.Match {
+	s.logger.Info("Building domain matches", zap.Int("apiMatchesCount", len(matches)), zap.Int("mmrHistoryCount", len(mmrHistory)))
+
 	rankMap := s.createRankMap(mmrHistory)
 	s.sortMatchesByTime(matches)
 
 	domainMatches := s.convertToDomainMatches(matches, rankMap)
+	s.logger.Info("Converted to domain matches", zap.Int("domainMatchesCount", len(domainMatches)))
+
 	s.enrichMatchesWithHeroData(domainMatches)
 	s.enrichMatchesWithRankData(domainMatches, rankMap)
 	s.calculateRankChanges(domainMatches)
@@ -490,6 +518,7 @@ func (s *PlayerProfileService) convertToDomainMatches(matches []deadlockapi.Dead
 			NetWorth:       match.NetWorth,
 			MatchDurationS: match.MatchDurationS,
 			MatchResult:    match.MatchResult,
+			PlayerTeam:     match.PlayerTeam,
 			StartTime:      match.StartTime,
 			MatchTime:      time.Unix(match.StartTime, 0),
 			Result:         domain.MapMatchResult(match.MatchResult),
@@ -569,7 +598,14 @@ func (s *PlayerProfileService) enrichHeroStats(heroStats []domain.HeroStat) {
 }
 
 func (s *PlayerProfileService) GetRecentMatches(ctx context.Context, steamID string) ([]domain.Match, error) {
-	return s.playerProfileRepository.FindRecentMatchesBySteamID(ctx, steamID, 5)
+	matches, err := s.playerProfileRepository.FindRecentMatchesBySteamID(ctx, steamID, 5)
+	if err != nil {
+		if err.Error() == "user not found" {
+			return []domain.Match{}, nil
+		}
+		return nil, err
+	}
+	return matches, nil
 }
 
 func (s *PlayerProfileService) SearchPlayers(ctx context.Context, query string, searchType string) ([]domain.User, error) {
@@ -581,6 +617,101 @@ func (s *PlayerProfileService) SearchPlayers(ctx context.Context, query string, 
 	default:
 		return nil, fmt.Errorf("invalid search type: %s", searchType)
 	}
+}
+
+func (s *PlayerProfileService) SearchPlayersWithAutocomplete(ctx context.Context, query string, limit int) ([]domain.User, error) {
+	if len(query) < 2 {
+		return []domain.User{}, nil
+	}
+
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+
+	if _, err := strconv.ParseInt(query, 10, 64); err == nil {
+		user, err := s.authService.SearchPlayersBySteamID(query)
+		if err != nil {
+			s.logger.Error("Error finding user by SteamID64", zap.Error(err), zap.String("steamID", query))
+			return []domain.User{}, nil
+		}
+		if user != nil {
+			return []domain.User{*user}, nil
+		}
+	}
+
+	resolvedSteamID, err := s.authService.ResolveVanityURL(query)
+	if err == nil && resolvedSteamID != "" {
+		user, err := s.authService.SearchPlayersBySteamID(resolvedSteamID)
+		if err != nil {
+			s.logger.Error("Error finding user by resolved vanity URL", zap.Error(err), zap.String("vanityURL", query), zap.String("resolvedID", resolvedSteamID))
+			return []domain.User{}, nil
+		}
+		if user != nil {
+			return []domain.User{*user}, nil
+		}
+	}
+
+	nicknameResults, err := s.playerProfileRepository.SearchByNicknamePartial(ctx, query, limit)
+	if err != nil {
+		s.logger.Error("Error searching by partial nickname", zap.Error(err))
+		return []domain.User{}, err
+	}
+
+	steamIDResults, err := s.playerProfileRepository.SearchBySteamIDPartial(ctx, query, limit)
+	if err != nil {
+		s.logger.Error("Error searching by partial Steam ID", zap.Error(err))
+		return []domain.User{}, err
+	}
+
+	allResults := make([]domain.User, 0, len(nicknameResults)+len(steamIDResults))
+	seenSteamIDs := make(map[string]bool)
+
+	for _, user := range nicknameResults {
+		if s.IsValidUser(user) {
+			allResults = append(allResults, user)
+			seenSteamIDs[user.SteamID] = true
+		}
+	}
+
+	for _, user := range steamIDResults {
+		if s.IsValidUser(user) && !seenSteamIDs[user.SteamID] {
+			allResults = append(allResults, user)
+			seenSteamIDs[user.SteamID] = true
+		}
+	}
+
+	validResults := allResults
+
+	sort.Slice(validResults, func(i, j int) bool {
+		queryLower := strings.ToLower(query)
+		nickI := strings.ToLower(validResults[i].Nickname)
+		nickJ := strings.ToLower(validResults[j].Nickname)
+
+		startsWithI := strings.HasPrefix(nickI, queryLower)
+		startsWithJ := strings.HasPrefix(nickJ, queryLower)
+
+		if startsWithI && !startsWithJ {
+			return true
+		}
+		if !startsWithI && startsWithJ {
+			return false
+		}
+
+		if len(nickI) != len(nickJ) {
+			return len(nickI) < len(nickJ)
+		}
+
+		return nickI < nickJ
+	})
+
+	if len(validResults) > limit {
+		validResults = validResults[:limit]
+	}
+
+	return validResults, nil
 }
 
 func (s *PlayerProfileService) searchBySteamID(ctx context.Context, query string) ([]domain.User, error) {
@@ -709,37 +840,87 @@ func (s *PlayerProfileService) combineSearchResults(localResults []domain.User, 
 	combinedUsers := make(map[string]domain.User)
 
 	for _, u := range localResults {
-		combinedUsers[u.SteamID] = u
+		if u.SteamID != "" && u.Nickname != "" {
+			combinedUsers[u.SteamID] = u
+		}
 	}
 
 	for _, apiPlayer := range apiResults {
-		if apiPlayer.Personaname == "" {
+		if !s.isValidAPIPlayer(apiPlayer) {
+			s.logger.Debug("Skipping invalid API player",
+				zap.Int("accountID", apiPlayer.AccountID),
+				zap.String("personaname", apiPlayer.Personaname),
+				zap.String("avatar", apiPlayer.Avatar))
 			continue
 		}
 
-		steamID := strconv.Itoa(apiPlayer.AccountID)
-		if _, exists := combinedUsers[steamID]; !exists {
-			user := s.createUserFromAPISearch(apiPlayer)
+		steamID64 := s.convertAccountIDToSteamID64(apiPlayer.AccountID)
+		if steamID64 == "" {
+			s.logger.Warn("Failed to convert AccountID to SteamID64",
+				zap.Int("accountID", apiPlayer.AccountID))
+			continue
+		}
+
+		if _, exists := combinedUsers[steamID64]; !exists {
+			user := s.createUserFromAPISearch(apiPlayer, steamID64)
+
 			err := s.userRepository.FindOrCreate(&user)
 			if err != nil {
-				s.logger.Error("Failed to create user from API search", zap.Error(err))
+				s.logger.Error("Failed to create user from API search",
+					zap.Error(err),
+					zap.String("steamID", steamID64),
+					zap.String("nickname", user.Nickname))
 				continue
 			}
-			combinedUsers[steamID] = user
+
+			combinedUsers[steamID64] = user
+			s.logger.Debug("Created user from API search",
+				zap.String("steamID", steamID64),
+				zap.String("nickname", user.Nickname))
 		}
 	}
 
 	return combinedUsers
 }
 
-func (s *PlayerProfileService) createUserFromAPISearch(apiPlayer domain.SteamProfileSearch) domain.User {
-	steamID := strconv.Itoa(apiPlayer.AccountID)
+func (s *PlayerProfileService) isValidAPIPlayer(apiPlayer domain.SteamProfileSearch) bool {
+	if apiPlayer.AccountID <= 0 {
+		return false
+	}
+
+	if apiPlayer.Personaname == "" {
+		return false
+	}
+
+	if apiPlayer.Avatar == "" || apiPlayer.Avatar == "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg" {
+		return true
+	}
+
+	return true
+}
+
+func (s *PlayerProfileService) convertAccountIDToSteamID64(accountID int) string {
+	steamID64 := int64(accountID) + 76561197960265728
+	return strconv.FormatInt(steamID64, 10)
+}
+
+func (s *PlayerProfileService) createUserFromAPISearch(apiPlayer domain.SteamProfileSearch, steamID64 string) domain.User {
+	avatarURL := apiPlayer.Avatar
+	if avatarURL == "" {
+		avatarURL = "https://steamcdn-a.akamaihd.net/steamcommunity/public/images/avatars/fe/fef49e7fa7e1997310d705b2a6158ff8dc1cdfeb.jpg"
+	}
+
+	profileURL := apiPlayer.Profileurl
+	if profileURL == "" {
+		profileURL = fmt.Sprintf("https://steamcommunity.com/profiles/%s", steamID64)
+	}
+
 	return domain.User{
 		ID:         uuid.New(),
-		SteamID:    steamID,
+		SteamID:    steamID64,
 		Nickname:   apiPlayer.Personaname,
-		AvatarURL:  apiPlayer.Avatar,
-		ProfileURL: apiPlayer.Profileurl,
+		AvatarURL:  avatarURL,
+		ProfileURL: profileURL,
 		CreatedAt:  time.Now(),
 		UpdatedAt:  time.Now(),
 	}
@@ -747,40 +928,79 @@ func (s *PlayerProfileService) createUserFromAPISearch(apiPlayer domain.SteamPro
 
 func (s *PlayerProfileService) sortAndReturnResults(combinedUsers map[string]domain.User) []domain.User {
 	finalResults := make([]domain.User, 0, len(combinedUsers))
+
 	for _, user := range combinedUsers {
-		finalResults = append(finalResults, user)
+		if s.IsValidUser(user) {
+			finalResults = append(finalResults, user)
+		} else {
+			s.logger.Debug("Filtering out invalid user from search results",
+				zap.String("steamID", user.SteamID),
+				zap.String("nickname", user.Nickname),
+				zap.String("avatarURL", user.AvatarURL))
+		}
 	}
 
 	sort.Slice(finalResults, func(i, j int) bool {
 		return finalResults[i].Nickname < finalResults[j].Nickname
 	})
 
+	s.logger.Info("Search results filtered and sorted",
+		zap.Int("totalFound", len(combinedUsers)),
+		zap.Int("validResults", len(finalResults)))
+
 	return finalResults
 }
 
-func (s *PlayerProfileService) calculateAndFillStats(profile *domain.PlayerProfile, card *deadlockapi.DeadlockCard, matches []domain.Match, mmrHistory []domain.DeadlockMMR) {
-	if card == nil {
-		return
+func (s *PlayerProfileService) IsValidUser(user domain.User) bool {
+	if user.SteamID == "" {
+		return false
 	}
 
+	if user.Nickname == "" {
+		return false
+	}
+
+	trimmedNickname := strings.TrimSpace(user.Nickname)
+	if trimmedNickname == "" || len(trimmedNickname) < 2 {
+		return false
+	}
+
+	if user.AvatarURL == "" {
+		return false
+	}
+
+	return true
+}
+
+func (s *PlayerProfileService) calculateAndFillStats(profile *domain.PlayerProfile, matches []domain.Match, mmrHistory []domain.DeadlockMMR) {
 	stats := s.calculateMatchStats(matches)
-	s.fillBasicStats(profile, card, matches, stats)
-	s.fillRankInfo(profile, card, mmrHistory)
+	s.fillBasicStats(profile, matches, stats)
+	s.fillRankInfo(profile, mmrHistory)
 	s.fillPerformanceData(profile, matches)
 
 	profile.LastUpdatedAt = time.Now()
 }
 
 func (s *PlayerProfileService) calculateMatchStats(matches []domain.Match) struct {
-	wins, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
+	wins, losses, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
 } {
 	var stats struct {
-		wins, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
+		wins, losses, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
 	}
 
 	for _, match := range matches {
-		if match.MatchResult == 1 {
-			stats.wins++
+		if match.PlayerTeam == 1 {
+			if match.MatchResult == 1 {
+				stats.wins++
+			} else {
+				stats.losses++
+			}
+		} else {
+			if match.MatchResult == 0 {
+				stats.wins++
+			} else {
+				stats.losses++
+			}
 		}
 		stats.totalKills += match.PlayerKills
 		stats.totalDeaths += match.PlayerDeaths
@@ -792,8 +1012,8 @@ func (s *PlayerProfileService) calculateMatchStats(matches []domain.Match) struc
 	return stats
 }
 
-func (s *PlayerProfileService) fillBasicStats(profile *domain.PlayerProfile, card *deadlockapi.DeadlockCard, matches []domain.Match, stats struct {
-	wins, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
+func (s *PlayerProfileService) fillBasicStats(profile *domain.PlayerProfile, matches []domain.Match, stats struct {
+	wins, losses, totalKills, totalDeaths, totalAssists, totalSouls, totalDuration int
 }) {
 	profile.TotalMatches = len(matches)
 	if profile.TotalMatches > 0 {
@@ -813,12 +1033,10 @@ func (s *PlayerProfileService) fillBasicStats(profile *domain.PlayerProfile, car
 	}
 }
 
-func (s *PlayerProfileService) fillRankInfo(profile *domain.PlayerProfile, card *deadlockapi.DeadlockCard, mmrHistory []domain.DeadlockMMR) {
+func (s *PlayerProfileService) fillRankInfo(profile *domain.PlayerProfile, mmrHistory []domain.DeadlockMMR) {
 	finalRank := 0
 	if len(mmrHistory) > 0 {
 		finalRank = domain.GetRankFromScore(mmrHistory[0].PlayerScore)
-	} else if card.RankedRank != nil {
-		finalRank = *card.RankedRank
 	}
 
 	profile.PlayerRank = finalRank
@@ -835,9 +1053,22 @@ func (s *PlayerProfileService) fillRankInfo(profile *domain.PlayerProfile, card 
 }
 
 func (s *PlayerProfileService) fillPerformanceData(profile *domain.PlayerProfile, matches []domain.Match) {
+	s.logger.Info("Filling performance data", zap.Int("matchesCount", len(matches)))
+
 	if len(matches) > 0 {
+		s.logger.Info("Calculating performance dynamics from matches")
 		profile.PerformanceDynamics = domain.CalculatePerformanceDynamics(matches)
 		profile.LastMatchTime = matches[0].MatchTime
+		s.logger.Info("Performance dynamics calculated",
+			zap.String("winLossTrend", profile.PerformanceDynamics.WinLoss.Trend),
+			zap.String("winLossValue", profile.PerformanceDynamics.WinLoss.Value))
+	} else {
+		s.logger.Warn("No matches found, initializing empty performance dynamics")
+		profile.PerformanceDynamics = domain.PerformanceDynamics{
+			WinLoss: domain.Trend{Trend: "stable", Value: "0/0", Sparkline: []float64{}},
+			KDA:     domain.Trend{Trend: "stable", Value: "0.00 KDA", Sparkline: []float64{}},
+			Rank:    domain.Trend{Trend: "stable", Value: "0 Rank", Sparkline: []float64{}},
+		}
 	}
 }
 
@@ -882,55 +1113,107 @@ func (s *PlayerProfileService) getRankImageURL(tier, subTier int) string {
 	return ""
 }
 
-func (s *PlayerProfileService) enrichFeaturedHeroes(card *deadlockapi.DeadlockCard) []domain.FeaturedHero {
-	if card == nil || len(card.Slots) == 0 {
-		return []domain.FeaturedHero{}
+func (s *PlayerProfileService) enrichFeaturedHeroes() []domain.FeaturedHero {
+	// Убираем логику, связанную с карточкой
+	return []domain.FeaturedHero{}
+}
+
+func (s *PlayerProfileService) SearchPlayersWithFilters(ctx context.Context, query string, filters dto.SearchFilters, limit int) ([]domain.User, error) {
+	if len(query) < 2 {
+		return []domain.User{}, nil
 	}
 
-	var featuredHeroes []domain.FeaturedHero
-	for _, slot := range card.Slots {
-		if slot.Hero.ID != 0 {
-			hero := s.createFeaturedHero(slot)
-			featuredHeroes = append(featuredHeroes, hero)
+	users, err := s.playerProfileRepository.SearchByNicknamePartial(ctx, query, limit)
+	if err != nil {
+		return []domain.User{}, err
+	}
+
+	validResults := make([]domain.User, 0, len(users))
+	for _, user := range users {
+		if s.IsValidUser(user) {
+			validResults = append(validResults, user)
 		}
 	}
 
-	return featuredHeroes
+	s.sortUsersByFilters(validResults, filters)
+
+	return validResults, nil
 }
 
-func (s *PlayerProfileService) createFeaturedHero(slot deadlockapi.DeadlockCardSlot) domain.FeaturedHero {
-	hero := domain.FeaturedHero{
-		HeroID: slot.Hero.ID,
+func (s *PlayerProfileService) sortUsersByFilters(users []domain.User, filters dto.SearchFilters) {
+	sort.Slice(users, func(i, j int) bool {
+		switch filters.SortBy {
+		case "created_at":
+			if filters.SortOrder == "desc" {
+				return users[i].CreatedAt.After(users[j].CreatedAt)
+			}
+			return users[i].CreatedAt.Before(users[j].CreatedAt)
+		case "updated_at":
+			if filters.SortOrder == "desc" {
+				return users[i].UpdatedAt.After(users[j].UpdatedAt)
+			}
+			return users[i].UpdatedAt.Before(users[j].UpdatedAt)
+		default: // "nickname"
+			if filters.SortOrder == "desc" {
+				return users[i].Nickname > users[j].Nickname
+			}
+			return users[i].Nickname < users[j].Nickname
+		}
+	})
+}
+
+func (s *PlayerProfileService) GetPopularPlayers(ctx context.Context, limit int) ([]domain.User, error) {
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
 	}
 
-	s.enrichHeroWithStaticData(&hero)
-	s.enrichHeroWithSlotData(&hero, slot)
+	users, err := s.playerProfileRepository.GetPopularPlayers(ctx, limit)
+	if err != nil {
+		s.logger.Error("Error getting popular players", zap.Error(err))
+		return []domain.User{}, err
+	}
 
-	return hero
-}
-
-func (s *PlayerProfileService) enrichHeroWithStaticData(hero *domain.FeaturedHero) {
-	if heroData, ok := s.staticDataService.HeroesByHeroID[hero.HeroID]; ok {
-		hero.HeroName = heroData.Name
-		if heroData.Images.IconHeroCard != nil {
-			hero.HeroImage = *heroData.Images.IconHeroCard
+	validResults := make([]domain.User, 0, len(users))
+	for _, user := range users {
+		if s.IsValidUser(user) {
+			validResults = append(validResults, user)
 		}
 	}
 
-	if hero.HeroName == "" {
-		hero.HeroName = fmt.Sprintf("Hero %d", hero.HeroID)
-	}
+	s.logger.Info("Retrieved popular players",
+		zap.Int("requested", limit),
+		zap.Int("found", len(validResults)))
+
+	return validResults, nil
 }
 
-func (s *PlayerProfileService) enrichHeroWithSlotData(hero *domain.FeaturedHero, slot deadlockapi.DeadlockCardSlot) {
-	if slot.Hero.Kills > 0 {
-		hero.Kills = slot.Hero.Kills
+func (s *PlayerProfileService) GetRecentlyActivePlayers(ctx context.Context, limit int) ([]domain.User, error) {
+	if limit <= 0 {
+		limit = 10
 	}
-	if slot.Hero.Wins > 0 {
-		hero.Wins = slot.Hero.Wins
+	if limit > 50 {
+		limit = 50
 	}
-	if slot.Stat != nil {
-		hero.StatID = slot.Stat.StatID
-		hero.StatScore = slot.Stat.StatScore
+
+	users, err := s.playerProfileRepository.GetRecentlyActivePlayers(ctx, limit)
+	if err != nil {
+		s.logger.Error("Error getting recently active players", zap.Error(err))
+		return []domain.User{}, err
 	}
+
+	validResults := make([]domain.User, 0, len(users))
+	for _, user := range users {
+		if s.IsValidUser(user) {
+			validResults = append(validResults, user)
+		}
+	}
+
+	s.logger.Info("Retrieved recently active players",
+		zap.Int("requested", limit),
+		zap.Int("found", len(validResults)))
+
+	return validResults, nil
 }

@@ -68,6 +68,7 @@ func main() {
 
 	userRepository := repositories.NewUserRepository(db)
 	playerProfileRepository := repositories.NewPlayerProfilePostgresRepository(db)
+
 	var deadlockAPIClient *deadlockapi.Client
 	if cfg.API.EnableRetry {
 		deadlockAPIClient = deadlockapi.NewClientWithCustomTimeout(cfg.API.Timeout)
@@ -76,9 +77,21 @@ func main() {
 	}
 
 	authService := services.NewAuthService(userRepository, cfg, logger)
+
+	playerSearchService := services.NewPlayerSearchService(
+		playerProfileRepository,
+		userRepository,
+		authService,
+		deadlockAPIClient,
+		rdb,
+		cfg.Steam.APIKey,
+		logger,
+	)
+
 	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, userRepository, authService, deadlockAPIClient, staticDataService, rdb, logger)
 
 	authHandler := handlers.NewAuthHandler(authService, cfg)
+	playerSearchHandler := handlers.NewPlayerSearchHandler(playerSearchService, logger)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
 	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
@@ -103,7 +116,13 @@ func main() {
 	steamGroup.GET("/login", authHandler.LoginHandler)
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
 
-	v1Group.GET("/players/search", playerProfileHandler.SearchPlayers)
+	v1Group.GET("/players/search", playerSearchHandler.SearchPlayers)
+	v1Group.GET("/players/search/debug", playerSearchHandler.SearchPlayersDebug)
+	v1Group.GET("/players/search/autocomplete", playerSearchHandler.SearchPlayersAutocomplete)
+	v1Group.GET("/players/search/filters", playerSearchHandler.SearchPlayersWithFilters)
+	v1Group.GET("/players/popular", playerSearchHandler.GetPopularPlayers)
+	v1Group.GET("/players/recently-active", playerSearchHandler.GetRecentlyActivePlayers)
+
 	v1Group.GET("/players/:steamId", playerProfileHandler.GetPlayerProfileV2)
 	v1Group.GET("/players/:steamId/metrics", playerProfileHandler.GetPlayerProfileWithMetrics)
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)

@@ -133,8 +133,8 @@ func (s *AuthService) extractSteamID(r *http.Request) (string, error) {
 }
 
 func (s *AuthService) findOrCreateUser(steamID string) (*domain.User, error) {
-	user, err := s.userRepository.FindBySteamID(steamID)
-	if err != nil {
+	user, _ := s.userRepository.FindBySteamID(steamID)
+	if user == nil {
 		return s.createNewUser(steamID)
 	}
 
@@ -185,7 +185,7 @@ func (s *AuthService) generateAndReturnToken(userID uuid.UUID) (string, error) {
 }
 
 func (s *AuthService) ResolveVanityURL(vanityURL string) (string, error) {
-	url := s.buildSteamAPIURL("ResolveVanityURL", map[string]string{"vanityurl": vanityURL})
+	url := s.buildSteamAPIURLv1("ResolveVanityURL", map[string]string{"vanityurl": vanityURL})
 
 	body, err := s.makeSteamAPIRequest(url)
 	if err != nil {
@@ -207,7 +207,20 @@ func (s *AuthService) GetPlayerSummaries(steamID string) (*domain.User, error) {
 }
 
 func (s *AuthService) buildSteamAPIURL(method string, params map[string]string) string {
-	baseURL := fmt.Sprintf("https://api.steampowered.com/ISteamUser/%s/v0001/", method)
+	baseURL := fmt.Sprintf("https://api.steampowered.com/ISteamUser/%s/v0002/", method)
+
+	urlParams := url.Values{}
+	urlParams.Add("key", s.config.Steam.APIKey)
+
+	for key, value := range params {
+		urlParams.Add(key, value)
+	}
+
+	return baseURL + "?" + urlParams.Encode()
+}
+
+func (s *AuthService) buildSteamAPIURLv1(method string, params map[string]string) string {
+	baseURL := fmt.Sprintf("https://api.steampowered.com/ISteamUser/%s/v1/", method)
 
 	urlParams := url.Values{}
 	urlParams.Add("key", s.config.Steam.APIKey)
@@ -237,11 +250,7 @@ func (s *AuthService) makeSteamAPIRequest(url string) ([]byte, error) {
 func (s *AuthService) parsePlayerSummariesResponse(body []byte, steamID string) (*domain.User, error) {
 	var resp struct {
 		Response struct {
-			Players []struct {
-				Nickname   string `json:"personaname"`
-				AvatarURL  string `json:"avatarfull"`
-				ProfileURL string `json:"profileurl"`
-			} `json:"players"`
+			Players json.RawMessage `json:"players"`
 		} `json:"response"`
 	}
 
@@ -250,21 +259,32 @@ func (s *AuthService) parsePlayerSummariesResponse(body []byte, steamID string) 
 		return nil, err
 	}
 
-	if len(resp.Response.Players) > 0 {
-		s.logger.Info("Steam API GetPlayerSummaries successful",
-			zap.String("steamID", steamID),
-			zap.String("personaname", resp.Response.Players[0].Nickname),
-			zap.String("avatarfull", resp.Response.Players[0].AvatarURL),
-		)
-	} else {
-		s.logger.Warn("Steam API GetPlayerSummaries returned zero players", zap.String("steamID", steamID))
-	}
-
-	if len(resp.Response.Players) == 0 {
+	if resp.Response.Players == nil || string(resp.Response.Players) == "null" {
 		return nil, errors.New("no player data found for steam id")
 	}
 
-	playerData := resp.Response.Players[0]
+	var players []struct {
+		Nickname   string `json:"personaname"`
+		AvatarURL  string `json:"avatarfull"`
+		ProfileURL string `json:"profileurl"`
+	}
+
+	err = json.Unmarshal(resp.Response.Players, &players)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(players) == 0 {
+		return nil, errors.New("no player data found for steam id")
+	}
+
+	s.logger.Info("Steam API GetPlayerSummaries successful",
+		zap.String("steamID", steamID),
+		zap.String("personaname", players[0].Nickname),
+		zap.String("avatarfull", players[0].AvatarURL),
+	)
+
+	playerData := players[0]
 	return s.createUserFromSteamData(playerData), nil
 }
 
@@ -310,4 +330,25 @@ func (s *AuthService) GenerateJWTToken(userID uuid.UUID) (string, error) {
 
 func (s *AuthService) GetUserByID(id string) (*domain.User, error) {
 	return s.userRepository.FindByID(id)
+}
+
+func (s *AuthService) SearchPlayersBySteamID(steamID string) (*domain.User, error) {
+	localUser, err := s.userRepository.FindBySteamID(steamID)
+	if err == nil && localUser != nil {
+		return localUser, nil
+	}
+
+	steamUser, err := s.GetPlayerSummaries(steamID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get player summaries for steamID %s: %w", steamID, err)
+	}
+
+	if steamUser != nil {
+		if err := s.userRepository.FindOrCreate(steamUser); err != nil {
+			return nil, fmt.Errorf("failed to create user for steamID %s: %w", steamID, err)
+		}
+		return steamUser, nil
+	}
+
+	return nil, nil
 }

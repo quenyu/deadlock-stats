@@ -1,0 +1,1 @@
+export const CROSSHAIR_STORAGE_KEY = 'crosshair-settings' 

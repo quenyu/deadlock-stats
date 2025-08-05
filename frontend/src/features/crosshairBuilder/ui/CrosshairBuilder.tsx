@@ -3,7 +3,6 @@ import { useCrosshairStore } from '@/entities/crosshair/model/store'
 import { PresetButtons } from './PresetButtons'
 import { CrosshairPreview } from './CrosshairPreview'
 import { CrosshairSettings } from './CrosshairSettings'
-import { LikeButton } from './LikeButton'
 import { PublishButton } from './PublishButton'
 import { Alerts } from './Alerts'
 import previewImg from '@/shared/assets/images/preview_1.png'
@@ -122,7 +121,6 @@ export const CrosshairBuilder = () => {
         <CrosshairSettings />
 
         <div className="flex gap-4 mt-6">
-          <LikeButton />
           <PublishButton />
         </div>
       </div>

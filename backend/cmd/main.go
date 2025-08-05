@@ -90,9 +90,13 @@ func main() {
 
 	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, userRepository, authService, deadlockAPIClient, staticDataService, rdb, logger)
 
+	crosshairRepository := repositories.NewCrosshairRepository(db)
+	crosshairService := services.NewCrosshairService(crosshairRepository)
+
 	authHandler := handlers.NewAuthHandler(authService, cfg)
 	playerSearchHandler := handlers.NewPlayerSearchHandler(playerSearchService, logger)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
+	crosshairHandler := handlers.NewCrosshairHandler(crosshairService)
 	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
 	e := echo.New()
@@ -128,6 +132,11 @@ func main() {
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)
 	v1Group.GET("/ranks", staticDataService.GetRanksHandler)
 
+	// Crosshair routes (public)
+	v1Group.GET("/crosshairs", crosshairHandler.GetAll)
+	v1Group.GET("/crosshairs/:id", crosshairHandler.GetByID)
+	v1Group.GET("/authors/:author_id/crosshairs", crosshairHandler.GetByAuthorID)
+
 	// Logout route
 	authGroup.GET("/logout", authHandler.LogoutHandler)
 
@@ -135,6 +144,12 @@ func main() {
 	protectedGroup := v1Group.Group("")
 	protectedGroup.Use(jwtMiddleware.Authorization)
 	protectedGroup.GET("/users/me", authHandler.GetUserMe)
+
+	// Protected crosshair routes
+	protectedGroup.POST("/crosshairs", crosshairHandler.Create)
+	protectedGroup.POST("/crosshairs/:id/like", crosshairHandler.Like)
+	protectedGroup.DELETE("/crosshairs/:id/like", crosshairHandler.Unlike)
+	protectedGroup.DELETE("/crosshairs/:id", crosshairHandler.Delete)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{

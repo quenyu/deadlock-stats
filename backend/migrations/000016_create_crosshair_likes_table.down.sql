@@ -1,0 +1,1 @@
+DROP TABLE IF EXISTS crosshair_likes; 

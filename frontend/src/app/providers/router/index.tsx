@@ -7,6 +7,7 @@ import { Layout } from '@/widgets/layout'
 import { ProtectedRoute } from '@/shared/lib/ProtectedRoute'
 import { PlayerSearchPage } from '@/pages/search/PlayerSearchPage'
 import { CrosshairBuilder } from '@/pages/crosshairs/CrosshairBuilder'
+import { CrosshairsPage } from '@/pages/crosshairs/CrosshairsPage'
 
 // Temporary stub components until features are implemented
 const ComingSoon = () => <div className="p-8 text-center text-muted-foreground">Coming soon...</div>
@@ -57,7 +58,7 @@ export const router = createBrowserRouter([
       },
       {
         path: routes.crosshairs.list,
-        element: <ComingSoon />,
+        element: <CrosshairsPage />,
       },
       {
         path: routes.crosshairs.create,

@@ -1,16 +1,26 @@
-import { useCrosshairStore } from '@/entities/crosshair/model/store'
+import { useState } from 'react'
 import { RocketIcon } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
+import { PublishModal } from './PublishModal'
 
 export const PublishButton = () => {
-  const publish = useCrosshairStore(s => s.publish)
+  const [showModal, setShowModal] = useState(false)
+
   return (
-    <Button className="py-0 pe-0" variant="outline" onClick={publish}>
-      <RocketIcon className="opacity-60" size={16} aria-hidden="true" />
-      Publish
-      <span className="text-muted-foreground before:bg-input relative ms-1 inline-flex h-full items-center justify-center rounded-full px-3 text-xs font-medium before:absolute before:inset-0 before:left-0 before:w-px">
-        0
-      </span>
-    </Button>
+    <>
+      <Button 
+        variant="outline" 
+        onClick={() => setShowModal(true)}
+        className="gap-2"
+      >
+        <RocketIcon size={16} />
+        Publish
+      </Button>
+
+      <PublishModal 
+        isOpen={showModal} 
+        onClose={() => setShowModal(false)} 
+      />
+    </>
   )
 } 

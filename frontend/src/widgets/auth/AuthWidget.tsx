@@ -76,7 +76,7 @@ export function AuthWidget() {
           <DropdownMenuItem asChild>
             <AppLink to={routes.player.profile(user.steam_id)}>
               <UserIcon className="mr-2 h-4 w-4" />
-              <span>Профиль</span>
+              <span>Profile</span>
             </AppLink>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
@@ -87,22 +87,22 @@ export function AuthWidget() {
               className="w-full flex items-center"
             >
               <BookUser className="mr-2 h-4 w-4" />
-              <span>Профиль Steam</span>
+              <span>Steam Profile</span>
             </a>
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
             <Swords className="mr-2 h-4 w-4" />
-            <span>Матчи</span>
+            <span>Matches</span>
           </DropdownMenuItem>
           <DropdownMenuItem disabled>
             <Settings className="mr-2 h-4 w-4" />
-            <span>Настройки</span>
+            <span>Settings</span>
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => useUserStore.getState().logout()}>
           <LogOut className="mr-2 h-4 w-4" />
-          <span>Выйти</span>
+          <span>Logout</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

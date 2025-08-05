@@ -1,17 +1,16 @@
-CREATE TABLE IF NOT EXISTS crosshairs (
+CREATE TABLE crosshairs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    author_id UUID NOT NULL,
+    author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
-    crosshair_code VARCHAR(255) NOT NULL,
+    description TEXT,
+    settings JSONB NOT NULL,
     is_public BOOLEAN NOT NULL DEFAULT false,
     view_count INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-    CONSTRAINT fk_author
-        FOREIGN KEY(author_id)
-        REFERENCES users(id)
-        ON DELETE CASCADE
+    likes_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_crosshairs_author_id ON crosshairs(author_id);
+CREATE INDEX idx_crosshairs_author_id ON crosshairs(author_id);
+CREATE INDEX idx_crosshairs_created_at ON crosshairs(created_at DESC);
+CREATE INDEX idx_crosshairs_likes_count ON crosshairs(likes_count DESC);

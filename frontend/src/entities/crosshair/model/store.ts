@@ -1,16 +1,23 @@
 import { create } from 'zustand'
-import { CrosshairSettings } from '../types/types'
+import { CrosshairSettings, CrosshairListItem } from '../types/types'
 import { PRESETS } from '../lib/presets'
+import { publishCrosshair } from '../api/publishCrosshair'
+import { likeCrosshair, unlikeCrosshair } from '../api/likeCrosshair'
+import { fetchPublishedCrosshairs } from '../api/fetchPublishedCrosshairs'
 
 const STORAGE_KEY = 'crosshair-settings'
 
 interface CrosshairStore {
   settings: CrosshairSettings
+  published: CrosshairListItem[]
+  loading: boolean
   setSettings: (settings: Partial<CrosshairSettings>) => void
   loadPreset: (name: string) => void
   reset: () => void
-  publish: () => Promise<void>
-  like: () => Promise<void>
+  loadPublished: () => Promise<void>
+  publish: (title: string, description: string, isPublic?: boolean) => Promise<void>
+  like: (id: string) => Promise<void>
+  unlike: (id: string) => Promise<void>
 }
 
 const defaultSettings = PRESETS.default
@@ -27,6 +34,8 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
     }
     return defaultSettings
   })(),
+  published: [],
+  loading: false,
   setSettings: (patch) => set(state => {
     const newSettings = { ...state.settings, ...patch }
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newSettings))
@@ -41,12 +50,48 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
     localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultSettings))
     return { settings: defaultSettings }
   }),
-  publish: async () => {
-    // TODO: do publish
-    alert('Publish crosshair (stub)')
+  loadPublished: async () => {
+    set({ loading: true })
+    try {
+      const data = await fetchPublishedCrosshairs()
+      set({ published: data.crosshairs })
+    } catch (error) {
+      console.error('Failed to load published crosshairs:', error)
+    } finally {
+      set({ loading: false })
+    }
   },
-  like: async () => {
-    // TODO: do like
-    alert('Like crosshair (stub)')
+  publish: async (title, description, isPublic = true) => {
+    const { settings } = get()
+    try {
+      await publishCrosshair({ 
+        title, 
+        description, 
+        settings, 
+        is_public: isPublic 
+      })
+      await get().loadPublished()
+    } catch (error) {
+      console.error('Failed to publish crosshair:', error)
+      throw error
+    }
+  },
+  like: async (id) => {
+    try {
+      await likeCrosshair(id)
+      await get().loadPublished()
+    } catch (error) {
+      console.error('Failed to like crosshair:', error)
+      throw error
+    }
+  },
+  unlike: async (id) => {
+    try {
+      await unlikeCrosshair(id)
+      await get().loadPublished()
+    } catch (error) {
+      console.error('Failed to unlike crosshair:', error)
+      throw error
+    }
   },
 })) 

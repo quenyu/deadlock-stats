@@ -9,7 +9,7 @@ services:
       - ./frontend:/app
       - /app/node_modules
     environment:
-      - VITE_API_URL=http://localhost:8080/api
+      - VITE_API_URL=http://localhost:8080/api/v1
     depends_on:
       - backend
 
@@ -20,7 +20,7 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./backend/internal/config/config.yaml:/app/config/config.yaml
+      - ./backend/internal/config/config.yaml:/app/internal/config/config.yaml
     environment:
       - APP_ENV=development
     depends_on:

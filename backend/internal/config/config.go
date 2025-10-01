@@ -28,7 +28,8 @@ type APIConfig struct {
 }
 
 type AppConfig struct {
-	Version string `mapstructure:"version"`
+    Version   string `mapstructure:"version"`
+    ClientURL string `mapstructure:"client_url"`
 }
 
 type ServerConfig struct {

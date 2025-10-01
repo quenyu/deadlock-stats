@@ -32,8 +32,8 @@ func (h *AuthHandler) CallbackHandler(c echo.Context) error {
 		return h.handleServiceError(c, "Failed to handle Steam callback")
 	}
 
-	h.setJWTCookie(c, jwtToken)
-	return c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000/")
+    h.setJWTCookie(c, jwtToken)
+    return c.Redirect(http.StatusTemporaryRedirect, h.config.App.ClientURL)
 }
 
 func (h *AuthHandler) LogoutHandler(c echo.Context) error {

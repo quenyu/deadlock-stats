@@ -29,6 +29,13 @@ var errorMap = map[error]httpError{
 	cErrors.ErrSessionExpired:      {http.StatusUnauthorized, "Session expired"},
 	cErrors.ErrSteamAuthFailed:     {http.StatusUnauthorized, "Steam authentication failed"},
 	cErrors.ErrJWTGenerationFailed: {http.StatusInternalServerError, "Failed to generate JWT token"},
+
+	// Crosshair-related
+	cErrors.ErrCrosshairNotFound:  {http.StatusNotFound, "Crosshair not found"},
+	cErrors.ErrInvalidCrosshairID: {http.StatusBadRequest, "Invalid crosshair ID"},
+	cErrors.ErrInvalidUserID:      {http.StatusBadRequest, "Invalid user ID"},
+	cErrors.ErrCrosshairForbidden: {http.StatusForbidden, "Forbidden"},
+	cErrors.ErrInvalidRequestBody: {http.StatusBadRequest, "Invalid request body"},
 }
 
 func ErrorHandler(err error, c echo.Context) error {

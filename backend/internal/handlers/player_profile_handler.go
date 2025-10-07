@@ -23,21 +23,25 @@ func NewPlayerProfileHandler(service *services.PlayerProfileService) *PlayerProf
 func (h *PlayerProfileHandler) GetPlayerProfileV2(c echo.Context) error {
 	steamID, err := h.validateSteamIDParam(c)
 	if err != nil {
-		return err
+		return ErrorHandler(err, c)
 	}
 
 	profile, err := h.service.GetExtendedPlayerProfile(c.Request().Context(), steamID)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
-	return h.handleProfileResponse(c, profile)
+	if profile == nil {
+		return ErrorHandler(cErrors.ErrPlayerNotFound, c)
+	}
+
+	return c.JSON(http.StatusOK, profile)
 }
 
 func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error {
 	steamID, err := h.validateSteamIDParam(c)
 	if err != nil {
-		return err
+		return ErrorHandler(err, c)
 	}
 
 	start := time.Now()
@@ -45,11 +49,11 @@ func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error
 	loadTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	if profile == nil {
-		return h.handleServiceError(c, cErrors.ErrPlayerNotFound)
+		return ErrorHandler(cErrors.ErrPlayerNotFound, c)
 	}
 
 	response := echo.Map{
@@ -69,15 +73,16 @@ func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error
 func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 	steamID, err := h.validateSteamIDParam(c)
 	if err != nil {
-		return err
+		return ErrorHandler(err, c)
 	}
 
-	limitStr := c.QueryParam("limit")
-	limit := 5 // default
-	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 20 {
-			limit = l
+	limit := 5
+	if limitStr := c.QueryParam("limit"); limitStr != "" {
+		val, err := strconv.Atoi(limitStr)
+		if err != nil || val < 1 || val > 20 {
+			return ErrorHandler(cErrors.ErrInvalidQuery, c)
 		}
+		limit = val
 	}
 
 	start := time.Now()
@@ -85,7 +90,11 @@ func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 	loadTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
+	}
+
+	if len(matches) == 0 {
+		return ErrorHandler(cErrors.ErrMatchNotFound, c)
 	}
 
 	response := echo.Map{
@@ -101,12 +110,16 @@ func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 func (h *PlayerProfileHandler) SearchPlayers(c echo.Context) error {
 	query, searchType, err := h.validateSearchParams(c)
 	if err != nil {
-		return err
+		return ErrorHandler(err, c)
 	}
 
 	users, err := h.service.SearchPlayers(c.Request().Context(), query, searchType)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
+	}
+
+	if len(users) == 0 {
+		return ErrorHandler(cErrors.ErrNoSearchResults, c)
 	}
 
 	return c.JSON(http.StatusOK, users)
@@ -132,29 +145,4 @@ func (h *PlayerProfileHandler) validateSearchParams(c echo.Context) (string, str
 	}
 
 	return query, searchType, nil
-}
-
-func (h *PlayerProfileHandler) handleProfileResponse(c echo.Context, profile interface{}) error {
-	if profile == nil {
-		return h.handleServiceError(c, cErrors.ErrPlayerNotFound)
-	}
-	return c.JSON(http.StatusOK, profile)
-}
-
-func (h *PlayerProfileHandler) handleServiceError(c echo.Context, err error) error {
-	switch {
-	case err == cErrors.ErrPlayerNotFound:
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "Player not found"})
-	case err == cErrors.ErrInvalidSteamID:
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid Steam ID"})
-	case err == cErrors.ErrInvalidQuery:
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid query parameter"})
-	case err == cErrors.ErrRateLimited:
-		return c.JSON(http.StatusTooManyRequests, echo.Map{"error": "Rate limit exceeded"})
-	default:
-		return c.JSON(http.StatusInternalServerError, echo.Map{
-			"error":   "Internal server error",
-			"message": err.Error(),
-		})
-	}
 }

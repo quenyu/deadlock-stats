@@ -37,7 +37,7 @@ const useUserStore = create<UserState>()(
       },
       logout: async () => {
         try {
-          await fetch(API_ENDPOINTS.auth.logout, { credentials: 'include' })
+          await (await import('@/shared/api/api')).api.get(API_ENDPOINTS.auth.logout)
         } catch (e) {
           // ignore
         } finally {

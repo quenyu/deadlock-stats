@@ -33,7 +33,7 @@ func (h *AuthHandler) CallbackHandler(c echo.Context) error {
 	}
 
 	h.setJWTCookie(c, jwtToken)
-	return c.Redirect(http.StatusTemporaryRedirect, "http://localhost:3000/")
+	return c.Redirect(http.StatusTemporaryRedirect, h.config.App.ClientURL)
 }
 
 func (h *AuthHandler) LogoutHandler(c echo.Context) error {

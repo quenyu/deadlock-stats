@@ -1,0 +1,12 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/quenyu/deadlock-stats/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://github.com/quenyu/deadlock-stats/blob/main/README.md
+    about: Read the project documentation
+  - name: 🚀 Roadmap
+    url: https://github.com/quenyu/deadlock-stats/blob/main/ROADMAP.md
+    about: View the project roadmap and planned features
+

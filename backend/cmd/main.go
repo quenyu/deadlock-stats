@@ -68,6 +68,7 @@ func main() {
 
 	userRepository := repositories.NewUserRepository(db)
 	playerProfileRepository := repositories.NewPlayerProfilePostgresRepository(db)
+
 	var deadlockAPIClient *deadlockapi.Client
 	if cfg.API.EnableRetry {
 		deadlockAPIClient = deadlockapi.NewClientWithCustomTimeout(cfg.API.Timeout)
@@ -76,10 +77,26 @@ func main() {
 	}
 
 	authService := services.NewAuthService(userRepository, cfg, logger)
+
+	playerSearchService := services.NewPlayerSearchService(
+		playerProfileRepository,
+		userRepository,
+		authService,
+		deadlockAPIClient,
+		rdb,
+		cfg.Steam.APIKey,
+		logger,
+	)
+
 	playerProfileService := services.NewPlayerProfileService(playerProfileRepository, userRepository, authService, deadlockAPIClient, staticDataService, rdb, logger)
 
+	crosshairRepository := repositories.NewCrosshairRepository(db)
+	crosshairService := services.NewCrosshairService(crosshairRepository)
+
 	authHandler := handlers.NewAuthHandler(authService, cfg)
+	playerSearchHandler := handlers.NewPlayerSearchHandler(playerSearchService, logger)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
+	crosshairHandler := handlers.NewCrosshairHandler(crosshairService)
 	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
 	e := echo.New()
@@ -103,11 +120,22 @@ func main() {
 	steamGroup.GET("/login", authHandler.LoginHandler)
 	steamGroup.GET("/callback", authHandler.CallbackHandler)
 
-	v1Group.GET("/players/search", playerProfileHandler.SearchPlayers)
+	v1Group.GET("/players/search", playerSearchHandler.SearchPlayers)
+	v1Group.GET("/players/search/debug", playerSearchHandler.SearchPlayersDebug)
+	v1Group.GET("/players/search/autocomplete", playerSearchHandler.SearchPlayersAutocomplete)
+	v1Group.GET("/players/search/filters", playerSearchHandler.SearchPlayersWithFilters)
+	v1Group.GET("/players/popular", playerSearchHandler.GetPopularPlayers)
+	v1Group.GET("/players/recently-active", playerSearchHandler.GetRecentlyActivePlayers)
+
 	v1Group.GET("/players/:steamId", playerProfileHandler.GetPlayerProfileV2)
 	v1Group.GET("/players/:steamId/metrics", playerProfileHandler.GetPlayerProfileWithMetrics)
 	v1Group.GET("/players/:steamId/matches", playerProfileHandler.GetRecentMatches)
 	v1Group.GET("/ranks", staticDataService.GetRanksHandler)
+
+	// Crosshair routes (public)
+	v1Group.GET("/crosshairs", crosshairHandler.GetAll)
+	v1Group.GET("/crosshairs/:id", crosshairHandler.GetByID)
+	v1Group.GET("/authors/:author_id/crosshairs", crosshairHandler.GetByAuthorID)
 
 	// Logout route
 	authGroup.GET("/logout", authHandler.LogoutHandler)
@@ -116,6 +144,12 @@ func main() {
 	protectedGroup := v1Group.Group("")
 	protectedGroup.Use(jwtMiddleware.Authorization)
 	protectedGroup.GET("/users/me", authHandler.GetUserMe)
+
+	// Protected crosshair routes
+	protectedGroup.POST("/crosshairs", crosshairHandler.Create)
+	protectedGroup.POST("/crosshairs/:id/like", crosshairHandler.Like)
+	protectedGroup.DELETE("/crosshairs/:id/like", crosshairHandler.Unlike)
+	protectedGroup.DELETE("/crosshairs/:id", crosshairHandler.Delete)
 
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{

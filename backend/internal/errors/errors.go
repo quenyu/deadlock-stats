@@ -6,6 +6,7 @@ var (
 	// --- Player-related errors ---
 	ErrPlayerNotFound = errors.New("player not found")
 	ErrInvalidSteamID = errors.New("invalid steam id")
+	ErrInvalidQuery   = errors.New("invalid query parameter")
 	ErrRateLimited    = errors.New("rate limited")
 	ErrAPIUnavailable = errors.New("external api unavailable")
 

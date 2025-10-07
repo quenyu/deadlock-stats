@@ -7,7 +7,14 @@ interface HeroStatsProps {
 }
 
 export const HeroStats = ({ heroStats }: HeroStatsProps) => {
-  if (!heroStats || heroStats.length === 0) {
+  const safeToFixed = (value: number | undefined | null, decimals: number = 1): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0.0';
+    }
+    return value.toFixed(decimals);
+  };
+
+  if (!Array.isArray(heroStats) || heroStats.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -44,10 +51,10 @@ export const HeroStats = ({ heroStats }: HeroStatsProps) => {
               <div className="flex-1">
                 <p className="font-semibold">{hero.hero_name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {hero.win_rate.toFixed(0)}% Win Rate ({hero.matches} Matches)
+                  {safeToFixed(hero.win_rate, 0)}% Win Rate ({hero.matches} Matches)
                 </p>
               </div>
-              <p className="font-semibold">{hero.kda.toFixed(2)} KDA</p>
+              <p className="font-semibold">{safeToFixed(hero.kda, 2)} KDA</p>
             </div>
             <Progress value={(hero.matches / maxMatches) * 100} className="h-2" />
           </div>

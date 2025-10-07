@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
 )
 
@@ -24,7 +25,7 @@ func (h *PlayerProfileHandler) GetPlayerProfile(c echo.Context) error {
 
 	profile, err := h.service.GetExtendedPlayerProfile(c.Request().Context(), steamID)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	return h.handleProfileResponse(c, profile)
@@ -38,7 +39,7 @@ func (h *PlayerProfileHandler) GetPlayerProfileV2(c echo.Context) error {
 
 	profile, err := h.service.GetExtendedPlayerProfile(c.Request().Context(), steamID)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	return h.handleProfileResponse(c, profile)
@@ -52,7 +53,7 @@ func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 
 	matches, err := h.service.GetRecentMatches(c.Request().Context(), steamID)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	return c.JSON(http.StatusOK, matches)
@@ -66,7 +67,7 @@ func (h *PlayerProfileHandler) SearchPlayers(c echo.Context) error {
 
 	users, err := h.service.SearchPlayers(c.Request().Context(), query, searchType)
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	return c.JSON(http.StatusOK, users)
@@ -83,11 +84,11 @@ func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error
 	loadTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	if profile == nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "Player not found"})
+		return ErrorHandler(cErrors.ErrPlayerNotFound, c)
 	}
 
 	response := echo.Map{
@@ -104,7 +105,7 @@ func (h *PlayerProfileHandler) GetPlayerProfileWithMetrics(c echo.Context) error
 func (h *PlayerProfileHandler) validateSteamIDParam(c echo.Context) (string, error) {
 	steamID := c.Param("steamId")
 	if steamID == "" {
-		return "", c.JSON(http.StatusBadRequest, echo.Map{"error": "Steam ID is required"})
+		return "", ErrorHandler(cErrors.ErrInvalidSteamID, c)
 	}
 	return steamID, nil
 }
@@ -112,7 +113,7 @@ func (h *PlayerProfileHandler) validateSteamIDParam(c echo.Context) (string, err
 func (h *PlayerProfileHandler) validateSearchParams(c echo.Context) (string, string, error) {
 	query := c.QueryParam("q")
 	if query == "" {
-		return "", "", c.JSON(http.StatusBadRequest, echo.Map{"error": "Query is required"})
+		return "", "", ErrorHandler(cErrors.ErrInvalidSteamID, c)
 	}
 
 	searchType := c.QueryParam("type")
@@ -123,13 +124,9 @@ func (h *PlayerProfileHandler) validateSearchParams(c echo.Context) (string, str
 	return query, searchType, nil
 }
 
-func (h *PlayerProfileHandler) handleServiceError(c echo.Context, err error) error {
-	return c.JSON(http.StatusInternalServerError, echo.Map{"error": "Internal server error"})
-}
-
 func (h *PlayerProfileHandler) handleProfileResponse(c echo.Context, profile interface{}) error {
 	if profile == nil {
-		return c.JSON(http.StatusNotFound, echo.Map{"error": "Player not found"})
+		return ErrorHandler(cErrors.ErrPlayerNotFound, c)
 	}
 	return c.JSON(http.StatusOK, profile)
 }

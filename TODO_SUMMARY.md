@@ -324,11 +324,11 @@ Day 28:    docs/api-swagger
 
 ## 📊 Progress Tracking
 
-**Completed**: 4/30 (13.3%) 🎉
+**Completed**: 5/30 (16.6%) 🎉
 
 ### Критические задачи
 - [x] fix/error-handling-backend ✅ **DONE**
-- [ ] fix/goroutine-error-channel (3 места нужно исправить)
+- [x] fix/goroutine-error-channel
 - [ ] fix/input-validation
 - [ ] fix/frontend-error-handling
 - [ ] fix/remove-console-logs

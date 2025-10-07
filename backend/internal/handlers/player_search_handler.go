@@ -7,6 +7,7 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/quenyu/deadlock-stats/internal/dto"
+	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
 	"go.uber.org/zap"
 )
@@ -25,27 +26,29 @@ func NewPlayerSearchHandler(searchService *services.PlayerSearchService, logger 
 
 func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 	start := time.Now()
+
 	query := c.QueryParam("query")
 	searchType := c.QueryParam("searchType")
 
-	page, _ := strconv.Atoi(c.QueryParam("page"))
-	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
+	if query == "" {
+		return ErrorHandler(cErrors.ErrInvalidQuery, c)
+	}
 
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	page, pageSize := parsePaginationParams(c, 1, 10)
 
 	result, err := h.searchService.SearchPlayers(c.Request().Context(), query, searchType, page, pageSize)
 	searchTime := time.Since(start)
+
 	if err != nil {
 		h.logger.Error("SearchPlayers error", zap.Error(err))
-		return c.JSON(500, map[string]interface{}{"error": err.Error()})
+		return ErrorHandler(err, c)
 	}
 
-	return c.JSON(200, map[string]interface{}{
+	if result.TotalCount == 0 {
+		return ErrorHandler(cErrors.ErrNoSearchResults, c)
+	}
+
+	response := echo.Map{
 		"results":    result.Results,
 		"totalCount": result.TotalCount,
 		"page":       result.Page,
@@ -53,30 +56,30 @@ func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 		"totalPages": result.TotalPages,
 		"searchType": searchType,
 		"searchTime": searchTime.Milliseconds(),
-	})
+		"query":      query,
+	}
+
+	return c.JSON(http.StatusOK, response)
 }
 
 func (h *PlayerSearchHandler) SearchPlayersAutocomplete(c echo.Context) error {
 	query := c.QueryParam("query")
-	limitStr := c.QueryParam("limit")
-
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Query parameter is required"})
+		return ErrorHandler(cErrors.ErrInvalidQuery, c)
 	}
 
-	limit := 10 // default
-	if limitStr != "" {
-		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 50 {
-			limit = l
-		}
-	}
-
+	limit := parseLimit(c, 10, 50)
 	start := time.Now()
+
 	users, err := h.searchService.SearchPlayersWithAutocomplete(c.Request().Context(), query, limit)
 	searchTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
+	}
+
+	if len(users) == 0 {
+		return ErrorHandler(cErrors.ErrNoSearchResults, c)
 	}
 
 	response := echo.Map{
@@ -87,53 +90,33 @@ func (h *PlayerSearchHandler) SearchPlayersAutocomplete(c echo.Context) error {
 		"results":    users,
 	}
 
-	// Логируем ответ для отладки
-	h.logger.Info("Search autocomplete response",
+	h.logger.Info("Autocomplete search completed",
 		zap.String("query", query),
 		zap.Int("totalFound", len(users)),
-		zap.Any("results", users))
+	)
 
 	return c.JSON(http.StatusOK, response)
 }
 
 func (h *PlayerSearchHandler) SearchPlayersWithFilters(c echo.Context) error {
 	query := c.QueryParam("query")
-
-	page, _ := strconv.Atoi(c.QueryParam("page"))
-	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 20
-	}
-
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Query parameter is required"})
+		return ErrorHandler(cErrors.ErrInvalidQuery, c)
 	}
 
-	filters := dto.SearchFilters{
-		SortBy:    c.QueryParam("sort_by"),
-		SortOrder: c.QueryParam("sort_order"),
-	}
-
-	if filters.SortBy == "" {
-		filters.SortBy = "nickname"
-	}
-	if filters.SortOrder == "" {
-		filters.SortOrder = "asc"
-	}
-	if filters.SortOrder != "asc" && filters.SortOrder != "desc" {
-		filters.SortOrder = "asc"
-	}
+	page, pageSize := parsePaginationParams(c, 1, 20)
+	filters := parseSearchFilters(c)
 
 	start := time.Now()
 	result, err := h.searchService.SearchPlayersWithFilters(c.Request().Context(), query, filters, page, pageSize)
 	searchTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
+	}
+
+	if result.TotalCount == 0 {
+		return ErrorHandler(cErrors.ErrNoSearchResults, c)
 	}
 
 	response := echo.Map{
@@ -151,22 +134,14 @@ func (h *PlayerSearchHandler) SearchPlayersWithFilters(c echo.Context) error {
 }
 
 func (h *PlayerSearchHandler) GetPopularPlayers(c echo.Context) error {
-	page, _ := strconv.Atoi(c.QueryParam("page"))
-	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	page, pageSize := parsePaginationParams(c, 1, 10)
 
 	start := time.Now()
 	result, err := h.searchService.GetPopularPlayers(c.Request().Context(), page, pageSize)
 	searchTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	response := echo.Map{
@@ -182,22 +157,14 @@ func (h *PlayerSearchHandler) GetPopularPlayers(c echo.Context) error {
 }
 
 func (h *PlayerSearchHandler) GetRecentlyActivePlayers(c echo.Context) error {
-	page, _ := strconv.Atoi(c.QueryParam("page"))
-	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
-
+	page, pageSize := parsePaginationParams(c, 1, 10)
 	start := time.Now()
+
 	result, err := h.searchService.GetRecentlyActivePlayers(c.Request().Context(), page, pageSize)
 	searchTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	response := echo.Map{
@@ -217,25 +184,17 @@ func (h *PlayerSearchHandler) SearchPlayersDebug(c echo.Context) error {
 	searchType := c.QueryParam("searchType")
 
 	if query == "" {
-		return c.JSON(http.StatusBadRequest, echo.Map{"error": "Query parameter is required"})
+		return ErrorHandler(cErrors.ErrInvalidQuery, c)
 	}
 
-	page, _ := strconv.Atoi(c.QueryParam("page"))
-	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
-
-	if page <= 0 {
-		page = 1
-	}
-	if pageSize <= 0 {
-		pageSize = 10
-	}
+	page, pageSize := parsePaginationParams(c, 1, 10)
 
 	start := time.Now()
 	result, err := h.searchService.SearchPlayers(c.Request().Context(), query, searchType, page, pageSize)
 	searchTime := time.Since(start)
 
 	if err != nil {
-		return h.handleServiceError(c, err)
+		return ErrorHandler(err, c)
 	}
 
 	debugInfo := make([]echo.Map, len(result.Results))
@@ -266,9 +225,40 @@ func (h *PlayerSearchHandler) SearchPlayersDebug(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-func (h *PlayerSearchHandler) handleServiceError(c echo.Context, err error) error {
-	return c.JSON(http.StatusInternalServerError, echo.Map{
-		"error":   "Internal server error",
-		"message": err.Error(),
-	})
+func parsePaginationParams(c echo.Context, defaultPage, defaultSize int) (int, int) {
+	page, _ := strconv.Atoi(c.QueryParam("page"))
+	pageSize, _ := strconv.Atoi(c.QueryParam("pageSize"))
+
+	if page <= 0 {
+		page = defaultPage
+	}
+	if pageSize <= 0 {
+		pageSize = defaultSize
+	}
+	return page, pageSize
+}
+
+func parseLimit(c echo.Context, defaultLimit, maxLimit int) int {
+	limitStr := c.QueryParam("limit")
+	if limitStr == "" {
+		return defaultLimit
+	}
+	if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= maxLimit {
+		return l
+	}
+	return defaultLimit
+}
+
+func parseSearchFilters(c echo.Context) dto.SearchFilters {
+	filters := dto.SearchFilters{
+		SortBy:    c.QueryParam("sort_by"),
+		SortOrder: c.QueryParam("sort_order"),
+	}
+	if filters.SortBy == "" {
+		filters.SortBy = "nickname"
+	}
+	if filters.SortOrder != "asc" && filters.SortOrder != "desc" {
+		filters.SortOrder = "asc"
+	}
+	return filters
 }

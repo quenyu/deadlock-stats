@@ -1,8 +1,8 @@
 module github.com/quenyu/deadlock-stats
 
-go 1.23.0
+go 1.24.0
 
-toolchain go1.23.11
+toolchain go1.24.8
 
 require (
 	github.com/golang-jwt/jwt/v5 v5.2.3
@@ -27,7 +27,7 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/goleak v1.3.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
 )
 
 require (

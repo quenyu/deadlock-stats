@@ -17,6 +17,7 @@ export const routes = {
     create: '/crosshairs/create',
     view: (id = ':id') => `/crosshairs/${id}`,
     edit: (id = ':id') => `/crosshairs/${id}/edit`,
+    gallery: '/crosshairs/gallery',
   },
   auth: {
     steam: API_ENDPOINTS.auth.steamLogin,

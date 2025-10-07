@@ -41,12 +41,12 @@ export const PlayerProfilePage = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-8">
           <PlayerInfoCard profile={{
-            nickname: profile.nickname,
-            avatar_url: profile.avatar_url,
-            player_rank: profile.player_rank,
-            rank_name: profile.rank_name,
-            rank_image: profile.rank_image,
-            sub_rank: profile.sub_rank,
+            nickname: profile.nickname || 'Unknown',
+            avatar_url: profile.avatar_url || '',
+            player_rank: profile.player_rank || 0,
+            rank_name: profile.rank_name || 'Unranked',
+            rank_image: profile.rank_image || '',
+            sub_rank: profile.sub_rank || 0,
             peak_rank: profile.peak_rank,
             peak_rank_name: profile.peak_rank_name,
             peak_rank_image: profile.peak_rank_image
@@ -58,7 +58,7 @@ export const PlayerProfilePage = () => {
           
           <RecentMatchesTimeline />
           
-          <RankHistoryChart rankHistory={converted.recent_matches.map(match => ({
+          <RankHistoryChart rankHistory={Array.isArray(converted.recent_matches) ? converted.recent_matches.map(match => ({
             match_id: match.id,
             rank: match.player_rank_after_match,
             mmr_score: match.player_score,
@@ -66,14 +66,14 @@ export const PlayerProfilePage = () => {
             rank_name: match.rank_name,
             sub_rank: match.sub_rank,
             rank_image: match.rank_image,
-          }))} />
+          })) : []} />
         </div>
         
         <div className="space-y-8">
           <PerformanceSnapshot stats={{
-            win_rate: profile.win_rate,
-            kd_ratio: profile.kd_ratio,
-            total_matches: profile.total_matches,
+            win_rate: profile.win_rate || 0,
+            kd_ratio: profile.kd_ratio || 0,
+            total_matches: profile.total_matches || 0,
             performance_dynamics: profile.performance_dynamics,
             avg_kills_per_match: profile.avg_kills_per_match ?? 0,
             avg_deaths_per_match: profile.avg_deaths_per_match ?? 0,
@@ -89,10 +89,19 @@ export const PlayerProfilePage = () => {
             <BestMates mates={profile.mate_stats} />
           )}
           
-          <HeroStats heroStats={converted.hero_stats} />
+          <HeroStats heroStats={Array.isArray(converted.hero_stats) ? converted.hero_stats : []} />
           
-          {profile.hero_mmr_history && profile.hero_mmr_history.length > 0 && (
-            <HeroMMRChart heroMMRHistory={profile.hero_mmr_history} />
+          {profile.hero_mmr_history && Array.isArray(profile.hero_mmr_history) && profile.hero_mmr_history.length > 0 && (
+            <HeroMMRChart heroMMRHistory={profile.hero_mmr_history.map(hero => ({
+              ...hero,
+              history: Array.isArray(hero.history) ? hero.history.map(point => ({
+                ...point,
+                match_id: point.match_id || 0,
+                start_time: point.start_time || 0,
+                player_score: point.player_score || 0,
+                rank: point.rank || 0
+              })) : []
+            }))} />
           )}
         </div>
       </div>

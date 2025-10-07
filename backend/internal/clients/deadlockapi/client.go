@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/quenyu/deadlock-stats/internal/domain"
@@ -45,13 +46,6 @@ func NewClientWithCustomTimeout(timeout time.Duration) *Client {
 			Transport: transport,
 		},
 	}
-}
-
-func (c *Client) FetchPlayerCard(steamID string) (*DeadlockCard, error) {
-	url := fmt.Sprintf("%s/players/%s/card", baseURL, steamID)
-	var card DeadlockCard
-	err := c.doRequestWithRetry(url, &card, 3)
-	return &card, err
 }
 
 func (c *Client) FetchMatchHistory(steamID string) ([]DeadlockMatch, error) {
@@ -157,9 +151,10 @@ func (c *Client) FetchLiteProfile(steamID string) (*domain.PlayerProfile, error)
 }
 
 func (c *Client) FetchSteamProfileSearch(query string) ([]domain.SteamProfileSearch, error) {
-	url := fmt.Sprintf("%s/players/steam-search?search_query=%s", baseURL, query)
+	encodedQuery := url.QueryEscape(query)
+	url := fmt.Sprintf("%s/players/steam-search?search_query=%s", baseURL, encodedQuery)
 	var profileSearch []domain.SteamProfileSearch
-	err := c.doRequest(url, &profileSearch)
+	err := c.doRequestWithRetry(url, &profileSearch, 2)
 	return profileSearch, err
 }
 

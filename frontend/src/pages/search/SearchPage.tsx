@@ -2,14 +2,12 @@ import { useState, useEffect } from 'react'
 import { Input } from '@/shared/ui/input'
 import { api } from '@/shared/api/api'
 import { type User } from '@/entities/user'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
-import { Button } from '@/shared/ui/button'
-import { AppLink } from '@/shared/ui/AppLink/AppLink'
 import { routes } from '@/shared/constants/routes'
 import React from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
+import { PaginatedResults } from '@/shared/ui/PaginatedResults'
+import { PageSizeSelector } from '@/shared/ui/PageSizeSelector'
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('')
@@ -17,16 +15,25 @@ export const SearchPage = () => {
   const [results, setResults] = useState<User[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [totalCount, setTotalCount] = useState(0)
+  const [totalPages, setTotalPages] = useState(0)
 
   useEffect(() => {
     if (searchType === 'nickname' && query.length < 3) {
       setResults([])
       setError(null)
+      setTotalCount(0)
+      setTotalPages(0)
       return
     }
     if (query.length === 0) {
       setResults([])
       setError(null)
+      setTotalCount(0)
+      setTotalPages(0)
       return
     }
 
@@ -34,12 +41,15 @@ export const SearchPage = () => {
       setLoading(true)
       setError(null)
       try {
-        const response = await api.get<User[]>(`/players/search?q=${query}&type=${searchType}`)
+        const response = await api.get(`/players/search?q=${query}&type=${searchType}&page=${page}&pageSize=${pageSize}`)
 
         console.log("Data received from backend:", response.data);
 
-        setResults(response.data)
-        if (response.data.length === 0) {
+        setResults(response.data.results || response.data)
+        setTotalCount(response.data.total_count || response.data.length)
+        setTotalPages(response.data.total_pages || 1)
+        
+        if ((response.data.results || response.data).length === 0) {
           setError('No players found.')
         }
       } catch (err) {
@@ -52,7 +62,16 @@ export const SearchPage = () => {
 
     const debounceTimeout = setTimeout(fetchResults, 300)
     return () => clearTimeout(debounceTimeout)
+  }, [query, searchType, page, pageSize])
+
+  useEffect(() => {
+    setPage(1)
   }, [query, searchType])
+
+  const handleUserClick = (user: User) => {
+    // Переход на профиль пользователя
+    window.location.href = routes.player.profile(user.steam_id)
+  }
 
   console.log(results)
 
@@ -77,8 +96,8 @@ export const SearchPage = () => {
           <div className="w-[140px]">
             <Label className="mb-2 block">Search by</Label>
             <Select value={searchType} onValueChange={(value) => {setQuery(''); setSearchType(value)}}>
-              <SelectTrigger className="h-12">
-                <SelectValue />
+              <SelectTrigger className="h-12 w-full text-base">
+                <SelectValue placeholder="Search type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="nickname">Nickname</SelectItem>
@@ -90,28 +109,31 @@ export const SearchPage = () => {
       </div>
 
       <div className="mt-8">
-        {loading && <div className="text-center">Searching...</div>}
-        {error && <div className="text-center text-red-500">{error}</div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {results.map((user) => (
-            <Card key={user.id}>
-              <CardHeader className="items-center">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.avatar_url} alt={user.nickname} />
-                  <AvatarFallback>{user.nickname.charAt(0)}</AvatarFallback>
-                </Avatar>
-              </CardHeader>
-              <CardContent className="text-center">
-                <CardTitle>{user.nickname}</CardTitle>
-              </CardContent>
-              <CardFooter>
-                <AppLink to={routes.player.profile(user.steam_id)} className="w-full">
-                  <Button className="w-full">View Profile</Button>
-                </AppLink>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        {error && <div className="text-center text-red-500 mb-4">{error}</div>}
+        
+        {totalCount > 0 && (
+          <div className="flex justify-end mb-4">
+            <PageSizeSelector 
+              pageSize={pageSize} 
+              onPageSizeChange={(newPageSize) => {
+                setPageSize(newPageSize)
+                setPage(1)
+              }} 
+            />
+          </div>
+        )}
+        
+        <PaginatedResults
+          results={results}
+          totalCount={totalCount}
+          page={page}
+          pageSize={pageSize}
+          totalPages={totalPages}
+          onPageChange={setPage}
+          onUserClick={handleUserClick}
+          showExtendedInfo={true}
+          loading={loading}
+        />
       </div>
     </div>
   )

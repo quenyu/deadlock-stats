@@ -1,1 +1,1 @@
-DROP TABLE IF EXISTS crosshairs;
+DROP TABLE IF EXISTS crosshairs; 

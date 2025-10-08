@@ -15,10 +15,12 @@ type httpError struct {
 
 var errorMap = map[error]httpError{
 	// Player-related
-	cErrors.ErrPlayerNotFound: {http.StatusNotFound, "Player not found"},
-	cErrors.ErrInvalidSteamID: {http.StatusBadRequest, "Invalid Steam ID"},
-	cErrors.ErrRateLimited:    {http.StatusTooManyRequests, "Rate limited"},
-	cErrors.ErrAPIUnavailable: {http.StatusServiceUnavailable, "External API unavailable"},
+	cErrors.ErrPlayerNotFound:    {http.StatusNotFound, "Player not found"},
+	cErrors.ErrInvalidSteamID:    {http.StatusBadRequest, "Invalid Steam ID"},
+	cErrors.ErrInvalidQuery:      {http.StatusBadRequest, "Invalid query parameter"},
+	cErrors.ErrRateLimited:       {http.StatusTooManyRequests, "Rate limited"},
+	cErrors.ErrAPIUnavailable:    {http.StatusServiceUnavailable, "External API unavailable"},
+	cErrors.ErrPlayerDataMissing: {http.StatusNotFound, "Player data missing"},
 
 	// Auth-related
 	cErrors.ErrUserNotFound:        {http.StatusNotFound, "User not found"},
@@ -36,6 +38,16 @@ var errorMap = map[error]httpError{
 	cErrors.ErrInvalidUserID:      {http.StatusBadRequest, "Invalid user ID"},
 	cErrors.ErrCrosshairForbidden: {http.StatusForbidden, "Forbidden"},
 	cErrors.ErrInvalidRequestBody: {http.StatusBadRequest, "Invalid request body"},
+
+	// Match-related
+	cErrors.ErrMatchNotFound:   {http.StatusNotFound, "Match not found"},
+	cErrors.ErrInvalidSearch:   {http.StatusBadRequest, "Invalid search type"},
+	cErrors.ErrNoSearchResults: {http.StatusNotFound, "No search results"},
+
+	// System-related
+	cErrors.ErrDatabaseError:   {http.StatusInternalServerError, "Database operation failed"},
+	cErrors.ErrCacheError:      {http.StatusInternalServerError, "Cache operation failed"},
+	cErrors.ErrUnknownInternal: {http.StatusInternalServerError, "Unknown internal error"},
 }
 
 func ErrorHandler(err error, c echo.Context) error {

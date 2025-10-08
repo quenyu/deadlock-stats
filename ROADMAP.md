@@ -353,7 +353,78 @@
 
 ---
 
-### Phase 9: Advanced Features (Ongoing) 🚀
+### Phase 9: Microservices Architecture (8-12 недель) 🏗️
+
+**Цель**: Миграция на микросервисы + gRPC (при достижении 100k+ users)
+
+#### Week 55-57: Подготовка и Proto Definitions
+
+- [ ] **refactor/proto-definitions** - Protocol Buffers для всех API
+  - auth.proto, player.proto, match.proto
+  - common.proto с shared types
+  - Buf setup для управления proto
+  
+- [ ] **refactor/modular-monolith** - Рефакторинг в модульный монолит
+  - Разделение на независимые модули
+  - Internal gRPC-ready interfaces
+  - Event bus для межмодульной коммуникации
+
+**Deliverables**:
+- ✅ Proto definitions для всех сервисов
+- ✅ Модульная структура кода
+- ✅ Event-driven communication ready
+
+#### Week 58-60: Первый микросервис - Auth Service
+
+- [ ] **feat/auth-microservice** - Выделение Auth в отдельный сервис
+  - gRPC server implementation
+  - Service discovery (Consul)
+  - Health checks & monitoring
+  
+- [ ] **feat/api-gateway** - API Gateway
+  - REST to gRPC translation
+  - Request aggregation
+  - Rate limiting & caching
+
+**Deliverables**:
+- ✅ Auth Service работает независимо
+- ✅ API Gateway маршрутизирует запросы
+- ✅ Zero downtime migration
+
+#### Week 61-63: Основные сервисы
+
+- [ ] **feat/player-microservice** - Player Service
+- [ ] **feat/match-microservice** - Match Service
+- [ ] **feat/analytics-microservice** - Analytics Service
+
+**Deliverables**:
+- ✅ 4+ микросервиса работают параллельно
+- ✅ Service mesh (опционально Istio)
+- ✅ Distributed tracing (Jaeger)
+
+#### Week 64-66: Оставшиеся сервисы + оптимизация
+
+- [ ] **feat/crosshair-microservice** - Crosshair Service
+- [ ] **feat/build-microservice** - Build Service
+- [ ] **feat/event-driven** - Event-driven architecture
+  - Message broker (NATS/RabbitMQ)
+  - Async event processing
+  - Saga patterns for distributed transactions
+
+**Deliverables**:
+- ✅ Полная микросервисная архитектура
+- ✅ Event-driven коммуникация
+- ✅ Horizontal scaling ready
+
+**Success Metrics (Phase 9)**:
+- ✅ Каждый сервис деплоится независимо
+- ✅ Latency <150ms (p95) для всех gRPC calls
+- ✅ Fault isolation работает (один сервис падает - остальные OK)
+- ✅ 10x лучше горизонтальное масштабирование
+
+---
+
+### Phase 10: Advanced Features (Ongoing) 🚀
 
 **Advanced features для future development**
 

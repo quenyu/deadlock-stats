@@ -33,6 +33,25 @@ var (
 	ErrInvalidSearch   = errors.New("invalid search type")
 	ErrNoSearchResults = errors.New("no results found")
 
+	// --- Validation errors ---
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrInvalidUsername    = errors.New("invalid username format")
+	ErrInvalidHeroName    = errors.New("invalid hero name")
+	ErrInvalidBuildTitle  = errors.New("invalid build title")
+	ErrInvalidDescription = errors.New("invalid description")
+	ErrInvalidRating      = errors.New("invalid rating value")
+	ErrInvalidPatchVer    = errors.New("invalid patch version format")
+	ErrFieldTooShort      = errors.New("field is too short")
+	ErrFieldTooLong       = errors.New("field is too long")
+	ErrFieldRequired      = errors.New("required field is missing")
+
+	// --- Build-related errors ---
+	ErrBuildNotFound  = errors.New("build not found")
+	ErrInvalidBuildID = errors.New("invalid build ID")
+	ErrBuildForbidden = errors.New("not allowed to modify this build")
+	ErrInvalidItemID  = errors.New("invalid item ID")
+	ErrInvalidAbility = errors.New("invalid ability")
+
 	// --- System / Internal errors ---
 	ErrDatabaseError   = errors.New("database operation failed")
 	ErrCacheError      = errors.New("cache operation failed")

@@ -3,11 +3,13 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
+	"github.com/quenyu/deadlock-stats/internal/validators"
 )
 
 type CrosshairHandler struct {
@@ -22,6 +24,34 @@ func (h *CrosshairHandler) Create(c echo.Context) error {
 	var req services.CreateCrosshairRequest
 	if err := c.Bind(&req); err != nil {
 		return ErrorHandler(cErrors.ErrInvalidRequestBody, c)
+	}
+
+	req.Title = strings.TrimSpace(req.Title)
+	req.Description = strings.TrimSpace(req.Description)
+
+	if err := validators.ValidateCrosshairTitle(req.Title); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateCrosshairDescription(req.Description); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateIntRange(req.Settings.Thickness, 0, 20); err != nil { // example bounds
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateIntRange(req.Settings.Length, 0, 100); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateIntRange(req.Settings.Gap, -50, 100); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateOpacity(req.Settings.Opacity); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateOpacity(req.Settings.PipOpacity); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateOpacity(req.Settings.DotOutlineOpacity); err != nil {
+		return ErrorHandler(err, c)
 	}
 	authorID, err := uuid.Parse(c.Get("userID").(string))
 	if err != nil {
@@ -46,6 +76,12 @@ func (h *CrosshairHandler) GetAll(c echo.Context) error {
 		if _, err := fmt.Sscanf(l, "%d", &limit); err != nil {
 			return ErrorHandler(cErrors.ErrInvalidRequestBody, c)
 		}
+	}
+	if err := validators.ValidateIntRange(page, 1, 1000); err != nil {
+		return ErrorHandler(err, c)
+	}
+	if err := validators.ValidateIntRange(limit, 1, 100); err != nil {
+		return ErrorHandler(err, c)
 	}
 	crosshairs, err := h.service.GetAll(page, limit)
 	if err != nil {

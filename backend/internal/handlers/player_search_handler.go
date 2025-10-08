@@ -9,6 +9,7 @@ import (
 	"github.com/quenyu/deadlock-stats/internal/dto"
 	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
+	"github.com/quenyu/deadlock-stats/internal/validators"
 	"go.uber.org/zap"
 )
 
@@ -30,8 +31,8 @@ func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 	query := c.QueryParam("query")
 	searchType := c.QueryParam("searchType")
 
-	if query == "" {
-		return ErrorHandler(cErrors.ErrInvalidQuery, c)
+	if err := validators.ValidatePlayerSearchQuery(query); err != nil {
+		return ErrorHandler(err, c)
 	}
 
 	page, pageSize := parsePaginationParams(c, 1, 10)
@@ -64,8 +65,9 @@ func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 
 func (h *PlayerSearchHandler) SearchPlayersAutocomplete(c echo.Context) error {
 	query := c.QueryParam("query")
-	if query == "" {
-		return ErrorHandler(cErrors.ErrInvalidQuery, c)
+
+	if err := validators.ValidatePlayerSearchQuery(query); err != nil {
+		return ErrorHandler(err, c)
 	}
 
 	limit := parseLimit(c, 10, 50)
@@ -100,8 +102,9 @@ func (h *PlayerSearchHandler) SearchPlayersAutocomplete(c echo.Context) error {
 
 func (h *PlayerSearchHandler) SearchPlayersWithFilters(c echo.Context) error {
 	query := c.QueryParam("query")
-	if query == "" {
-		return ErrorHandler(cErrors.ErrInvalidQuery, c)
+
+	if err := validators.ValidatePlayerSearchQuery(query); err != nil {
+		return ErrorHandler(err, c)
 	}
 
 	page, pageSize := parsePaginationParams(c, 1, 20)
@@ -183,8 +186,8 @@ func (h *PlayerSearchHandler) SearchPlayersDebug(c echo.Context) error {
 	query := c.QueryParam("query")
 	searchType := c.QueryParam("searchType")
 
-	if query == "" {
-		return ErrorHandler(cErrors.ErrInvalidQuery, c)
+	if err := validators.ValidatePlayerSearchQuery(query); err != nil {
+		return ErrorHandler(err, c)
 	}
 
 	page, pageSize := parsePaginationParams(c, 1, 10)

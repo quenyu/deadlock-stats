@@ -44,6 +44,25 @@ var errorMap = map[error]httpError{
 	cErrors.ErrInvalidSearch:   {http.StatusBadRequest, "Invalid search type"},
 	cErrors.ErrNoSearchResults: {http.StatusNotFound, "No search results"},
 
+	// Validation-related
+	cErrors.ErrInvalidEmail:       {http.StatusBadRequest, "Invalid email format"},
+	cErrors.ErrInvalidUsername:    {http.StatusBadRequest, "Invalid username format"},
+	cErrors.ErrInvalidHeroName:    {http.StatusBadRequest, "Invalid hero name"},
+	cErrors.ErrInvalidBuildTitle:  {http.StatusBadRequest, "Invalid build title"},
+	cErrors.ErrInvalidDescription: {http.StatusBadRequest, "Invalid description"},
+	cErrors.ErrInvalidRating:      {http.StatusBadRequest, "Invalid rating value"},
+	cErrors.ErrInvalidPatchVer:    {http.StatusBadRequest, "Invalid patch version format"},
+	cErrors.ErrFieldTooShort:      {http.StatusBadRequest, "Field is too short"},
+	cErrors.ErrFieldTooLong:       {http.StatusBadRequest, "Field is too long"},
+	cErrors.ErrFieldRequired:      {http.StatusBadRequest, "Required field is missing"},
+
+	// Build-related
+	cErrors.ErrBuildNotFound:  {http.StatusNotFound, "Build not found"},
+	cErrors.ErrInvalidBuildID: {http.StatusBadRequest, "Invalid build ID"},
+	cErrors.ErrBuildForbidden: {http.StatusForbidden, "Not allowed to modify this build"},
+	cErrors.ErrInvalidItemID:  {http.StatusBadRequest, "Invalid item ID"},
+	cErrors.ErrInvalidAbility: {http.StatusBadRequest, "Invalid ability"},
+
 	// System-related
 	cErrors.ErrDatabaseError:   {http.StatusInternalServerError, "Database operation failed"},
 	cErrors.ErrCacheError:      {http.StatusInternalServerError, "Cache operation failed"},

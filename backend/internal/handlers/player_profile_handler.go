@@ -8,6 +8,7 @@ import (
 	"github.com/labstack/echo/v4"
 	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
+	"github.com/quenyu/deadlock-stats/internal/validators"
 )
 
 type PlayerProfileHandler struct {
@@ -127,7 +128,7 @@ func (h *PlayerProfileHandler) SearchPlayers(c echo.Context) error {
 
 func (h *PlayerProfileHandler) validateSteamIDParam(c echo.Context) (string, error) {
 	steamID := c.Param("steamId")
-	if steamID == "" {
+	if err := validators.ValidateSteamID(steamID); err != nil {
 		return "", cErrors.ErrInvalidSteamID
 	}
 	return steamID, nil
@@ -135,8 +136,9 @@ func (h *PlayerProfileHandler) validateSteamIDParam(c echo.Context) (string, err
 
 func (h *PlayerProfileHandler) validateSearchParams(c echo.Context) (string, string, error) {
 	query := c.QueryParam("q")
-	if query == "" {
-		return "", "", cErrors.ErrInvalidQuery
+
+	if err := validators.ValidatePlayerSearchQuery(query); err != nil {
+		return "", "", err
 	}
 
 	searchType := c.QueryParam("type")

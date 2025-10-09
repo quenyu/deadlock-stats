@@ -69,6 +69,7 @@ type RateLimitConfig struct {
 	RequestsPerSecond int            `mapstructure:"requests_per_second"`
 	Burst             int            `mapstructure:"burst"`
 	UseRedis          bool           `mapstructure:"use_redis"`
+	RedisKeyTTL       time.Duration  `mapstructure:"redis_key_ttl"`
 	PerEndpoint       map[string]int `mapstructure:"per_endpoint"`
 	Whitelist         []string       `mapstructure:"whitelist"`
 	TrustedProxies    []string       `mapstructure:"trusted_proxies"`

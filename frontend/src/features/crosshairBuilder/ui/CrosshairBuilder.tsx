@@ -22,6 +22,7 @@ export const CrosshairBuilder = () => {
   const posRef = useRef({ x: 60, y: 60 })
   const animating = useRef(false)
 
+  // @ts-expect-error - Will be used for future alert functionality
   const addAlert = (message: string, type: 'svg' | 'config' | 'preset') => {
     const id = Date.now().toString()
     setAlerts(prev => [...prev, { id, message, type }])

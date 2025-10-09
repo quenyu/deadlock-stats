@@ -1,6 +1,5 @@
 import { useCrosshairStore } from '@/entities/crosshair/model/store'
 import { Button } from '@/shared/ui/button'
-import { Badge } from '@/shared/ui/badge'
 import { HeartIcon } from 'lucide-react'
 import { logger } from '@/shared/lib/logger'
 

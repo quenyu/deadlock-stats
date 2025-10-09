@@ -14,7 +14,8 @@ export const fetchCurrentUser = async () => {
       return null;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        logger.error('API Error during user fetch', error, {
+        logger.error('API Error during user fetch', {
+          error,
           status: error.response?.status,
           data: error.response?.data
         });
@@ -27,7 +28,7 @@ export const fetchCurrentUser = async () => {
       
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred';
-      logger.error('Error fetching user', error);
+      logger.error('Error fetching user', { error });
       throw new Error(errorMessage);
     }
 }

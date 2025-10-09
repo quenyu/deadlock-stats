@@ -22,7 +22,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ crosshairId, liked, like
         await like(crosshairId)
       }
     } catch (error) {
-      logger.error('Failed to toggle like', error, { crosshairId, liked })
+      logger.error('Failed to toggle like', { error, crosshairId, liked })
     }
   }
 

@@ -8,6 +8,6 @@ export const AuthBySteam = async () => {
 
         return response.data
     } catch (error) {
-        logger.error('Steam authentication failed', error)
+        logger.error('Steam authentication failed', { error })
     }
 }

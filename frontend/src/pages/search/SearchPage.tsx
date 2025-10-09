@@ -60,7 +60,7 @@ export const SearchPage = () => {
         }
       } catch (err) {
         setError('Failed to search for players.')
-        log.error('Search failed', err)
+        log.error('Search failed', { error: err })
       } finally {
         setLoading(false)
       }

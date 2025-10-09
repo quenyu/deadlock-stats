@@ -4,6 +4,7 @@ import { PRESETS } from '../lib/presets'
 import { publishCrosshair } from '../api/publishCrosshair'
 import { likeCrosshair, unlikeCrosshair } from '../api/likeCrosshair'
 import { fetchPublishedCrosshairs } from '../api/fetchPublishedCrosshairs'
+import { logger } from '@/shared/lib/logger'
 
 const STORAGE_KEY = 'crosshair-settings'
 
@@ -56,7 +57,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       const data = await fetchPublishedCrosshairs()
       set({ published: data.crosshairs })
     } catch (error) {
-      console.error('Failed to load published crosshairs:', error)
+      logger.error('Failed to load published crosshairs', error)
     } finally {
       set({ loading: false })
     }
@@ -72,7 +73,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       })
       await get().loadPublished()
     } catch (error) {
-      console.error('Failed to publish crosshair:', error)
+      logger.error('Failed to publish crosshair', error)
       throw error
     }
   },
@@ -81,7 +82,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       await likeCrosshair(id)
       await get().loadPublished()
     } catch (error) {
-      console.error('Failed to like crosshair:', error)
+      logger.error('Failed to like crosshair', error)
       throw error
     }
   },
@@ -90,7 +91,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       await unlikeCrosshair(id)
       await get().loadPublished()
     } catch (error) {
-      console.error('Failed to unlike crosshair:', error)
+      logger.error('Failed to unlike crosshair', error)
       throw error
     }
   },

@@ -8,6 +8,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/shared/ui/label'
 import { PaginatedResults } from '@/shared/ui/PaginatedResults'
 import { PageSizeSelector } from '@/shared/ui/PageSizeSelector'
+import { createLogger } from '@/shared/lib/logger'
+
+const log = createLogger('SearchPage')
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('')
@@ -43,7 +46,10 @@ export const SearchPage = () => {
       try {
         const response = await api.get(`/players/search?q=${query}&type=${searchType}&page=${page}&pageSize=${pageSize}`)
 
-        console.log("Data received from backend:", response.data);
+        log.debug('Search results received', { 
+          resultCount: response.data.results?.length || response.data.length,
+          totalCount: response.data.total_count 
+        })
 
         setResults(response.data.results || response.data)
         setTotalCount(response.data.total_count || response.data.length)
@@ -54,7 +60,7 @@ export const SearchPage = () => {
         }
       } catch (err) {
         setError('Failed to search for players.')
-        console.error(err)
+        log.error('Search failed', err)
       } finally {
         setLoading(false)
       }
@@ -73,7 +79,7 @@ export const SearchPage = () => {
     window.location.href = routes.player.profile(user.steam_id)
   }
 
-  console.log(results)
+  log.debug('Current search results', { count: results.length })
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">

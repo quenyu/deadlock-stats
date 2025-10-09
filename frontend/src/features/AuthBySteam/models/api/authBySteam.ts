@@ -1,5 +1,6 @@
 import { api } from '@/shared/api/api'
 import { API_ENDPOINTS } from '@/shared/constants/api'
+import { logger } from '@/shared/lib/logger'
 
 export const AuthBySteam = async () => {
     try {
@@ -7,6 +8,6 @@ export const AuthBySteam = async () => {
 
         return response.data
     } catch (error) {
-        console.error(error)
+        logger.error('Steam authentication failed', error)
     }
 }

@@ -6,6 +6,9 @@ import { Badge } from '@/shared/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { EyeIcon, CalendarIcon } from 'lucide-react'
 import { CrosshairPreview } from '@/features/crosshairBuilder/ui/CrosshairPreview'
+import { createLogger } from '@/shared/lib/logger'
+
+const log = createLogger('CrosshairGallery')
 
 export const CrosshairGallery = () => {
   const published = useCrosshairStore(s => s.published)
@@ -16,7 +19,8 @@ export const CrosshairGallery = () => {
     loadPublished()
   }, [loadPublished])
 
-  console.log("CROSSHAIR GALLERY", published)
+  log.debug('Gallery state', { publishedCount: published.length, loading })
+  
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -37,7 +41,6 @@ export const CrosshairGallery = () => {
       </div>
     )
   }
-  console.log("PUBLISHED LENGTH", published.length)
 
   if (published.length === 0) {
     return (
@@ -52,9 +55,7 @@ export const CrosshairGallery = () => {
     )
   }
 
-
-
-  console.log("RETURNING CROSSHAIR GALLERY")
+  log.info('Rendering crosshair gallery', { count: published.length })
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

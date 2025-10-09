@@ -111,6 +111,65 @@ func main() {
 		AllowCredentials: true,
 	}))
 
+	// Rate limiting middleware
+	if cfg.RateLimit.Enabled {
+		var redisClient *redis.Client
+		if cfg.RateLimit.UseRedis {
+			redisClient = rdb
+		}
+
+		rateLimiter := customMiddleware.NewRateLimiter(&customMiddleware.RateLimitConfig{
+			Enabled:           true,
+			Strategy:          customMiddleware.RateLimitStrategy(cfg.RateLimit.Strategy),
+			RequestsPerSecond: cfg.RateLimit.RequestsPerSecond,
+			Burst:             cfg.RateLimit.Burst,
+			Redis:             redisClient,
+			Logger:            logger,
+			CustomKeyFunc: func(c echo.Context) string {
+				ip := c.RealIP()
+				for _, whitelistedIP := range cfg.RateLimit.Whitelist {
+					if ip == whitelistedIP {
+						return "whitelisted:" + ip
+					}
+				}
+
+				endpoint := c.Request().Method + ":" + c.Path()
+				if _, hasCustomLimit := cfg.RateLimit.PerEndpoint[endpoint]; hasCustomLimit {
+					return "endpoint:" + endpoint + ":" + ip
+				}
+
+				return ""
+			},
+			OnLimitReached: func(c echo.Context, key string) {
+				logger.Warn("rate limit exceeded",
+					zap.String("key", key),
+					zap.String("ip", c.RealIP()),
+					zap.String("path", c.Path()),
+					zap.String("method", c.Request().Method),
+					zap.String("user_agent", c.Request().UserAgent()),
+				)
+			},
+		})
+
+		e.Use(rateLimiter.Middleware())
+
+		if !cfg.RateLimit.UseRedis {
+			go func() {
+				ticker := time.NewTicker(5 * time.Minute)
+				defer ticker.Stop()
+				for range ticker.C {
+					rateLimiter.CleanupInMemoryLimiters()
+				}
+			}()
+		}
+
+		logger.Info("rate limiting enabled",
+			zap.String("strategy", cfg.RateLimit.Strategy),
+			zap.Int("requests_per_second", cfg.RateLimit.RequestsPerSecond),
+			zap.Bool("use_redis", cfg.RateLimit.UseRedis),
+		)
+	}
+
 	// Unprotected routes
 	apiGroup := e.Group("/api")
 	v1Group := apiGroup.Group("/v1")

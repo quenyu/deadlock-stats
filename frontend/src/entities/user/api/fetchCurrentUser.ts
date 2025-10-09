@@ -5,7 +5,9 @@ import { logger } from '@/shared/lib/logger';
 
 export const fetchCurrentUser = async () => {
     try {
-      const response = await api.get<User>('/users/me');
+      const response = await api.get<User>('/users/me', {
+        skipAuthErrorToast: true, // Don't show toast for initial auth check
+      });
       
       if (response.status === 200 && response.data) {
         return response.data;
@@ -14,16 +16,17 @@ export const fetchCurrentUser = async () => {
       return null;
     } catch (error) {
       if (axios.isAxiosError(error)) {
+        // Don't log 401 as error - it's expected when user is not authenticated
+        if (error.response?.status === 401) {
+          logger.info('User not authenticated');
+          return null;
+        }
+        
         logger.error('API Error during user fetch', {
           error,
           status: error.response?.status,
           data: error.response?.data
         });
-        
-        if (error.response?.status === 401) {
-          logger.info('User not authenticated');
-          return null;
-        }
       }
       
       const errorMessage =

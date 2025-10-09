@@ -36,8 +36,20 @@ export const searchApi = {
     page: number = 1,
     pageSize: number = 20
   ): Promise<FilteredSearchResponse> => {
+    const params: any = { query, page, pageSize }
+    
+    if (filters.search_type) {
+      params.searchType = filters.search_type
+    }
+    
+    Object.keys(filters).forEach(key => {
+      if (key !== 'search_type' && filters[key as keyof SearchFilters] !== undefined) {
+        params[key] = filters[key as keyof SearchFilters]
+      }
+    })
+    
     const response = await api.get<FilteredSearchResponse>(`/players/search/filters`, {
-      params: { query, page, pageSize, ...filters }
+      params
     })
     return response.data
   },

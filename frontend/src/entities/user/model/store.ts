@@ -25,12 +25,14 @@ const useUserStore = create<UserState>()(
           const response = await fetchCurrentUser()
 
           if (!response) {
+            // User not authenticated - this is normal, not an error
             set({ user: null, isLoading: false, error: null })
             return
           }
 
-          set({ user: response, isLoading: false })
+          set({ user: response as User, isLoading: false })
         } catch (error) {
+          // Only set error for unexpected failures (not 401)
           const errorMessage = extractErrorMessage(error, 'Failed to fetch user')
           set({ user: null, isLoading: false, error: errorMessage })
         }

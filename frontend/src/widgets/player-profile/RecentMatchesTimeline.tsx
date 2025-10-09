@@ -44,7 +44,7 @@ export const RecentMatchesTimeline = () => {
       <CardContent>
         <div className="space-y-6">
           {Array.isArray(matches) && matches.map((match) => (
-            <div key={match.id} className="flex items-center gap-4">
+            <div key={match.match_id} className="flex items-center gap-4">
               <HeroIcon name={match.hero_name} />
               <div className="flex-grow">
                 <div className="flex justify-between items-center">

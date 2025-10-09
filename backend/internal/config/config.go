@@ -38,13 +38,26 @@ type ServerConfig struct {
 }
 
 type DatabaseConfig struct {
-	Host           string `mapstructure:"host"`
-	Port           string `mapstructure:"port"`
-	User           string `mapstructure:"user"`
-	Password       string `mapstructure:"password"`
-	Name           string `mapstructure:"name"`
-	SSLMode        string `mapstructure:"sslmode"`
-	MaxConnections int    `mapstructure:"max_connections"`
+	Host           string     `mapstructure:"host"`
+	Port           string     `mapstructure:"port"`
+	User           string     `mapstructure:"user"`
+	Password       string     `mapstructure:"password"`
+	Name           string     `mapstructure:"name"`
+	SSLMode        string     `mapstructure:"sslmode"`
+	MaxConnections int        `mapstructure:"max_connections"`
+	Pool           PoolConfig `mapstructure:"pool"`
+}
+
+// PoolConfig holds database connection pool configuration
+type PoolConfig struct {
+	MaxOpenConns        int           `mapstructure:"max_open_conns"`
+	MaxIdleConns        int           `mapstructure:"max_idle_conns"`
+	ConnMaxLifetime     time.Duration `mapstructure:"conn_max_lifetime"`
+	ConnMaxIdleTime     time.Duration `mapstructure:"conn_max_idle_time"`
+	HealthCheckInterval time.Duration `mapstructure:"health_check_interval"`
+
+	// EnableMetrics enables connection pool metrics collection
+	EnableMetrics bool `mapstructure:"enable_metrics"`
 }
 
 type RedisConfig struct {

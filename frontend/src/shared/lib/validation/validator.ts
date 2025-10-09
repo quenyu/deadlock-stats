@@ -27,7 +27,7 @@ export function safeParse<T extends z.ZodTypeAny>(
   if (!result.success) {
     log.warn('Validation failed', {
       context,
-      errors: result.error.errors,
+      errors: result.error.issues,
       data,
     })
     return { success: false, errors: result.error }
@@ -50,7 +50,7 @@ export function parse<T extends z.ZodTypeAny>(
     if (error instanceof z.ZodError) {
       log.error('Validation failed', {
         context,
-        errors: error.errors,
+        errors: error.issues,
         data,
       })
     }
@@ -97,7 +97,7 @@ export function createValidator<T extends z.ZodTypeAny>(schema: T) {
 export function formatValidationErrors(error: z.ZodError): Record<string, string> {
   const errors: Record<string, string> = {}
 
-  error.errors.forEach((err) => {
+  error.issues.forEach((err) => {
     const path = err.path.join('.')
     errors[path] = err.message
   })
@@ -109,6 +109,6 @@ export function formatValidationErrors(error: z.ZodError): Record<string, string
  * Get first validation error message
  */
 export function getFirstError(error: z.ZodError): string {
-  return error.errors[0]?.message || 'Validation error'
+  return error.issues[0]?.message || 'Validation error'
 }
 

@@ -6,22 +6,31 @@ import { z } from 'zod'
 import { primitiveSchemas } from '../base'
 
 /**
- * User schema
+ * User schema - matches backend/internal/domain/user.go User
  */
 export const userSchema = z.object({
   id: primitiveSchemas.uuid,
-  steamId: primitiveSchemas.nonEmptyString,
-  personaName: primitiveSchemas.nonEmptyString,
-  profileUrl: primitiveSchemas.url.optional(),
-  avatar: primitiveSchemas.url.optional(),
-  createdAt: primitiveSchemas.timestamp,
-  updatedAt: primitiveSchemas.timestamp,
+  steam_id: primitiveSchemas.nonEmptyString,
+  nickname: primitiveSchemas.nonEmptyString,
+  profile_url: z.string(),
+  avatar_url: z.string(),
+  created_at: primitiveSchemas.isoDate,
+  updated_at: primitiveSchemas.isoDate,
+  
+  // Extended fields from UserSearchResult DTO
+  account_id: z.number().int().optional(),
+  countrycode: z.string().optional(),
+  last_updated: z.number().int().optional(),
+  realname: z.string().optional(),
+  is_deadlock_player: z.boolean().optional(),
+  deadlock_status_known: z.boolean().optional(),
 })
 
 /**
- * User type inferred from schema
+ * User type inferred from schema (camelCase for new API)
  */
 export type User = z.infer<typeof userSchema>
+export type UserFromSchema = User // Alias for clarity
 
 /**
  * Partial user schema (for updates)
@@ -33,8 +42,8 @@ export const partialUserSchema = userSchema.partial()
  */
 export const createUserSchema = userSchema.omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
+  created_at: true,
+  updated_at: true,
 })
 
 /**
@@ -43,9 +52,9 @@ export const createUserSchema = userSchema.omit({
 export const updateUserSchema = userSchema
   .omit({
     id: true,
-    steamId: true,
-    createdAt: true,
-    updatedAt: true,
+    steam_id: true,
+    created_at: true,
+    updated_at: true,
   })
   .partial()
 

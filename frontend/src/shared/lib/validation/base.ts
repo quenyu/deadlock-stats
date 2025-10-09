@@ -20,10 +20,13 @@ export const primitiveSchemas = {
   nonNegativeInt: z.number().int().nonnegative('Must be non-negative integer'),
   
   /** Timestamp */
-  timestamp: z.iso.datetime('Invalid timestamp format'),
+  timestamp: z.number().int().nonnegative(),
   
-  /** ISO date */
-  isoDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
+  /** ISO 8601 datetime string */
+  isoDate: z.string().datetime(),
+  
+  /** ISO date only (YYYY-MM-DD) */
+  isoDateOnly: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
 } as const
 
 
@@ -35,11 +38,12 @@ export const objectSchemas = {
   }),
   
   /** Pagination response metadata */
+  // Matches backend: backend/internal/dto/search_result.go SearchResult
   paginationMeta: z.object({
-    total: z.number().int().nonnegative(),
+    total_count: z.number().int().nonnegative(),
     page: z.number().int().positive(),
-    limit: z.number().int().positive(),
-    totalPages: z.number().int().nonnegative(),
+    page_size: z.number().int().positive(),
+    total_pages: z.number().int().nonnegative(),
   }),
   
   /** Error response */

@@ -7,48 +7,20 @@ import { primitiveSchemas } from '../base'
 
 /**
  * Crosshair settings schema
+ * Matches backend: backend/internal/domain/crosshair.go CrosshairSettings
  */
 export const crosshairSettingsSchema = z.object({
-  // Dot settings
-  dotEnabled: z.boolean(),
-  dotSize: z.number().min(0).max(100),
-  dotColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  dotOpacity: z.number().min(0).max(1),
-  dotOutlineEnabled: z.boolean(),
-  dotOutlineSize: z.number().min(0).max(10),
-  dotOutlineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
+  color: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
+  thickness: z.number().int().min(0),
+  length: z.number().int().min(0),
+  gap: z.number().int().min(0),
+  dot: z.boolean(),
+  opacity: z.number().min(0).max(1),
+  pipOpacity: z.number().min(0).max(1),
   dotOutlineOpacity: z.number().min(0).max(1),
-
-  // Cross settings
-  crossEnabled: z.boolean(),
-  crossLength: z.number().min(0).max(100),
-  crossThickness: z.number().min(0).max(20),
-  crossGap: z.number().min(0).max(50),
-  crossColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  crossOpacity: z.number().min(0).max(1),
-  crossOutlineEnabled: z.boolean(),
-  crossOutlineSize: z.number().min(0).max(10),
-  crossOutlineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  crossOutlineOpacity: z.number().min(0).max(1),
-
-  // Circle settings
-  circleEnabled: z.boolean(),
-  circleRadius: z.number().min(0).max(100),
-  circleThickness: z.number().min(0).max(20),
-  circleColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  circleOpacity: z.number().min(0).max(1),
-  circleOutlineEnabled: z.boolean(),
-  circleOutlineSize: z.number().min(0).max(10),
-  circleOutlineColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  circleOutlineOpacity: z.number().min(0).max(1),
-
-  // T-shape settings
-  tShapeEnabled: z.boolean(),
-  tShapeLength: z.number().min(0).max(100),
-  tShapeThickness: z.number().min(0).max(20),
-  tShapeGap: z.number().min(0).max(50),
-  tShapeColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Invalid color format'),
-  tShapeOpacity: z.number().min(0).max(1),
+  hitMarkerDuration: z.number().min(0),
+  pipBorder: z.boolean(),
+  pipGapStatic: z.boolean(),
 })
 
 /**
@@ -58,17 +30,21 @@ export type CrosshairSettings = z.infer<typeof crosshairSettingsSchema>
 
 /**
  * Crosshair schema (published)
+ * Matches backend: backend/internal/domain/crosshair.go Crosshair
  */
 export const crosshairSchema = z.object({
   id: primitiveSchemas.uuid,
-  userId: primitiveSchemas.uuid,
+  author_id: primitiveSchemas.uuid,
+  author_name: z.string().optional(),
+  author_avatar: z.string().optional(),
   title: primitiveSchemas.nonEmptyString.max(100, 'Title too long'),
   description: z.string().max(500, 'Description too long').optional(),
   settings: crosshairSettingsSchema,
-  isPublic: z.boolean(),
-  likes: primitiveSchemas.nonNegativeInt,
-  createdAt: primitiveSchemas.timestamp,
-  updatedAt: primitiveSchemas.timestamp,
+  is_public: z.boolean(),
+  likes_count: primitiveSchemas.nonNegativeInt,
+  view_count: primitiveSchemas.nonNegativeInt,
+  created_at: primitiveSchemas.isoDate,
+  updated_at: primitiveSchemas.isoDate,
 })
 
 /**
@@ -83,7 +59,7 @@ export const createCrosshairSchema = z.object({
   title: primitiveSchemas.nonEmptyString.max(100, 'Title too long'),
   description: z.string().max(500, 'Description too long').optional(),
   settings: crosshairSettingsSchema,
-  isPublic: z.boolean().default(true),
+  is_public: z.boolean().default(true),
 })
 
 /**

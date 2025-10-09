@@ -19,11 +19,14 @@
 // Export base schemas and utilities
 export * from './base'
 
-// Export all schemas
+// Export all schemas and types
 export * from './schemas/user'
 export * from './schemas/player'
 export * from './schemas/crosshair'
 export * from './schemas/match'
+
+// Export hooks
+export * from './hooks'
 
 // Export validator utilities
 export * from './validator'

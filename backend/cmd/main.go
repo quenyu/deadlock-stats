@@ -9,7 +9,6 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -19,8 +18,10 @@ import (
 	"github.com/quenyu/deadlock-stats/internal/config"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
 	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
+	"github.com/quenyu/deadlock-stats/internal/middleware/ratelimit"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
 	"github.com/quenyu/deadlock-stats/internal/services"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	gorm_postgres "gorm.io/driver/postgres"
@@ -111,62 +112,45 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Rate limiting middleware
 	if cfg.RateLimit.Enabled {
-		var redisClient *redis.Client
-		if cfg.RateLimit.UseRedis {
-			redisClient = rdb
+		rateLimitManager, err := ratelimit.NewManager(&ratelimit.ManagerConfig{
+			Config: &ratelimit.Config{
+				Enabled:           cfg.RateLimit.Enabled,
+				Strategy:          ratelimit.Strategy(cfg.RateLimit.Strategy),
+				RequestsPerSecond: cfg.RateLimit.RequestsPerSecond,
+				Burst:             cfg.RateLimit.Burst,
+				UseRedis:          cfg.RateLimit.UseRedis,
+				RedisKeyTTL:       cfg.RateLimit.RedisKeyTTL,
+				PerEndpoint:       cfg.RateLimit.PerEndpoint,
+				Whitelist:         cfg.RateLimit.Whitelist,
+				TrustedProxies:    cfg.RateLimit.TrustedProxies,
+			},
+			RedisClient: rdb,
+			Logger:      logger,
+		})
+		if err != nil {
+			logger.Fatal("failed to initialize rate limiter", zap.Error(err))
 		}
 
-		rateLimiter := customMiddleware.NewRateLimiter(&customMiddleware.RateLimitConfig{
-			Enabled:           true,
-			Strategy:          customMiddleware.RateLimitStrategy(cfg.RateLimit.Strategy),
-			RequestsPerSecond: cfg.RateLimit.RequestsPerSecond,
-			Burst:             cfg.RateLimit.Burst,
-			Redis:             redisClient,
-			Logger:            logger,
-			CustomKeyFunc: func(c echo.Context) string {
-				ip := c.RealIP()
-				for _, whitelistedIP := range cfg.RateLimit.Whitelist {
-					if ip == whitelistedIP {
-						return "whitelisted:" + ip
-					}
-				}
-
-				endpoint := c.Request().Method + ":" + c.Path()
-				if _, hasCustomLimit := cfg.RateLimit.PerEndpoint[endpoint]; hasCustomLimit {
-					return "endpoint:" + endpoint + ":" + ip
-				}
-
-				return ""
-			},
-			OnLimitReached: func(c echo.Context, key string) {
-				logger.Warn("rate limit exceeded",
-					zap.String("key", key),
-					zap.String("ip", c.RealIP()),
-					zap.String("path", c.Path()),
-					zap.String("method", c.Request().Method),
-					zap.String("user_agent", c.Request().UserAgent()),
-				)
-			},
+		rateLimitManager.SetOnLimitReached(func(c echo.Context, key string) {
+			logger.Warn("rate limit exceeded",
+				zap.String("ip", c.RealIP()),
+				zap.String("path", c.Path()),
+				zap.String("key", key),
+			)
 		})
 
-		e.Use(rateLimiter.Middleware())
+		e.Use(rateLimitManager.Middleware())
 
-		if !cfg.RateLimit.UseRedis {
-			go func() {
-				ticker := time.NewTicker(5 * time.Minute)
-				defer ticker.Stop()
-				for range ticker.C {
-					rateLimiter.CleanupInMemoryLimiters()
-				}
-			}()
-		}
+		defer func() {
+			if err := rateLimitManager.Close(); err != nil {
+				logger.Error("error closing rate limiter", zap.Error(err))
+			}
+		}()
 
 		logger.Info("rate limiting enabled",
-			zap.String("strategy", cfg.RateLimit.Strategy),
-			zap.Int("requests_per_second", cfg.RateLimit.RequestsPerSecond),
-			zap.Bool("use_redis", cfg.RateLimit.UseRedis),
+			zap.String("strategy", string(rateLimitManager.Config().Strategy)),
+			zap.Int("requests_per_second", rateLimitManager.Config().RequestsPerSecond),
 		)
 	}
 

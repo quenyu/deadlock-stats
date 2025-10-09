@@ -1,6 +1,6 @@
 import { AlertCircle } from 'lucide-react'
 import { Button } from '@/shared/ui/button'
-import { Alert, AlertDescription, AlertTitle } from '@/shared/ui/alert'
+import { cn } from '@/shared/lib/utils'
 
 interface ErrorStateProps {
   error: string | Error | null
@@ -20,23 +20,25 @@ export function ErrorState({
   const errorMessage = error instanceof Error ? error.message : error
 
   return (
-    <Alert variant="destructive" className={className}>
-      <AlertCircle className="h-4 w-4" />
-      <AlertTitle>{title}</AlertTitle>
-      <AlertDescription className="flex flex-col gap-2">
-        <p>{errorMessage}</p>
-        {onRetry && (
-          <Button 
-            onClick={onRetry} 
-            variant="outline" 
-            size="sm"
-            className="w-fit"
-          >
-            Try again
-          </Button>
-        )}
-      </AlertDescription>
-    </Alert>
+    <div className={cn("rounded-lg border border-destructive bg-destructive/10 p-4", className)}>
+      <div className="flex items-start gap-3">
+        <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+        <div className="flex-1">
+          <h3 className="font-semibold text-destructive mb-1">{title}</h3>
+          <p className="text-sm text-destructive/90 mb-3">{errorMessage}</p>
+          {onRetry && (
+            <Button 
+              onClick={onRetry} 
+              variant="outline" 
+              size="sm"
+              className="w-fit"
+            >
+              Try again
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
   )
 }
 

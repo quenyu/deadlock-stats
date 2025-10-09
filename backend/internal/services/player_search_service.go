@@ -193,21 +193,27 @@ func (s *PlayerSearchService) SearchPlayersWithFilters(ctx context.Context, quer
 		}
 	}
 
-	if !s.isValidSteamID(query) && !strings.Contains(query, " ") {
-		steamID, err := resolveVanityURL(query, s.steamAPIKey)
-		if err == nil && steamID != "" {
-			query = steamID
+	var results []dto.UserSearchResult
+	var err error
+
+	switch filters.GetSearchType() {
+	case "steamid":
+		results, err = s.searchBySteamID(ctx, query)
+	case "nickname":
+		results, err = s.searchByNickname(ctx, query)
+	default:
+		localResults, apiResults, err := s.fetchSearchResults(ctx, query)
+		if err != nil {
+			return nil, err
 		}
+		results = s.combineSearchResults(localResults, apiResults)
 	}
 
-	localResults, apiResults, err := s.fetchSearchResults(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	results := s.combineSearchResults(localResults, apiResults)
 	s.sortUsersByFilters(results, filters)
-
 	return s.applyPagination(results, page, pageSize), nil
 }
 
@@ -542,11 +548,29 @@ func (s *PlayerSearchService) sortUsersByFilters(users []dto.UserSearchResult, f
 	sort.Slice(users, func(i, j int) bool {
 		switch filters.GetDefaultSortBy() {
 		case "created_at":
+			if users[i].CreatedAt == nil && users[j].CreatedAt == nil {
+				return false
+			}
+			if users[i].CreatedAt == nil {
+				return filters.GetDefaultSortOrder() == "asc"
+			}
+			if users[j].CreatedAt == nil {
+				return filters.GetDefaultSortOrder() == "desc"
+			}
 			if filters.GetDefaultSortOrder() == "desc" {
 				return users[i].CreatedAt.After(*users[j].CreatedAt)
 			}
 			return users[i].CreatedAt.Before(*users[j].CreatedAt)
 		case "updated_at":
+			if users[i].UpdatedAt == nil && users[j].UpdatedAt == nil {
+				return false
+			}
+			if users[i].UpdatedAt == nil {
+				return filters.GetDefaultSortOrder() == "asc"
+			}
+			if users[j].UpdatedAt == nil {
+				return filters.GetDefaultSortOrder() == "desc"
+			}
 			if filters.GetDefaultSortOrder() == "desc" {
 				return users[i].UpdatedAt.After(*users[j].UpdatedAt)
 			}

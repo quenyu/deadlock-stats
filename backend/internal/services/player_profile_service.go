@@ -10,12 +10,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/domain"
 	"github.com/quenyu/deadlock-stats/internal/dto"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 )

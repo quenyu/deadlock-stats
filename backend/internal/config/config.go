@@ -15,6 +15,7 @@ type Config struct {
 	App       AppConfig       `mapstructure:"app"`
 	API       APIConfig       `mapstructure:"api"`
 	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
+	Security  SecurityConfig  `mapstructure:"security"`
 }
 
 type APIConfig struct {
@@ -85,6 +86,32 @@ type RateLimitConfig struct {
 	PerEndpoint       map[string]int `mapstructure:"per_endpoint"`
 	Whitelist         []string       `mapstructure:"whitelist"`
 	TrustedProxies    []string       `mapstructure:"trusted_proxies"`
+}
+
+type SecurityConfig struct {
+	// HSTS
+	HSTSEnabled           bool `mapstructure:"hsts_enabled"`
+	HSTSMaxAge            int  `mapstructure:"hsts_max_age"`
+	HSTSIncludeSubdomains bool `mapstructure:"hsts_include_subdomains"`
+	HSTSPreload           bool `mapstructure:"hsts_preload"`
+
+	// CSP
+	CSPEnabled    bool `mapstructure:"csp_enabled"`
+	CSPReportOnly bool `mapstructure:"csp_report_only"`
+
+	// XSS
+	XSSProtection      bool   `mapstructure:"xss_protection"`
+	XFrameOptions      string `mapstructure:"x_frame_options"`
+	ContentTypeNoSniff bool   `mapstructure:"content_type_no_sniff"`
+
+	// Other
+	ReferrerPolicy    string `mapstructure:"referrer_policy"`
+	PermissionsPolicy string `mapstructure:"permissions_policy"`
+
+	// CSRF
+	CSRFEnabled        bool   `mapstructure:"csrf_enabled"`
+	CSRFCookieSecure   bool   `mapstructure:"csrf_cookie_secure"`
+	CSRFCookieSameSite string `mapstructure:"csrf_cookie_same_site"`
 }
 
 func LoadConfig(path string) (*Config, error) {

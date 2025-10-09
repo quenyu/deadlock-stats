@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +21,7 @@ import (
 	"github.com/quenyu/deadlock-stats/internal/database"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
 	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
+	"github.com/quenyu/deadlock-stats/internal/middleware/security"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
 	"github.com/quenyu/deadlock-stats/internal/services"
 	"github.com/spf13/viper"
@@ -117,12 +119,10 @@ func main() {
 	// Global middlewares
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{cfg.App.ClientURL},
-		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},
-		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		AllowCredentials: true,
-	}))
+
+	// Security middleware (modular: Headers, CSP, CORS, CSRF)
+	securityManager := security.NewManager(buildSecurityConfig(cfg, logger))
+	e.Use(securityManager.Middleware())
 
 	// Rate limiting middleware
 	if cfg.RateLimit.Enabled {
@@ -299,4 +299,63 @@ func runMigrations(db *sql.DB, logger *zap.Logger) error {
 
 	logger.Info("database migrations applied successfully")
 	return nil
+}
+
+func buildSecurityConfig(cfg *config.Config, logger *zap.Logger) *security.ManagerConfig {
+	// Convert SameSite string to http.SameSite
+	var sameSite http.SameSite
+	switch cfg.Security.CSRFCookieSameSite {
+	case "strict":
+		sameSite = http.SameSiteStrictMode
+	case "lax":
+		sameSite = http.SameSiteLaxMode
+	case "none":
+		sameSite = http.SameSiteNoneMode
+	default:
+		sameSite = http.SameSiteStrictMode
+	}
+
+	return &security.ManagerConfig{
+		Headers: &security.HeadersConfig{
+			HSTSMaxAge:            cfg.Security.HSTSMaxAge,
+			HSTSIncludeSubdomains: cfg.Security.HSTSIncludeSubdomains,
+			HSTSPreload:           cfg.Security.HSTSPreload,
+			XSSProtection:         cfg.Security.XSSProtection,
+			XFrameOptions:         cfg.Security.XFrameOptions,
+			ContentTypeNoSniff:    cfg.Security.ContentTypeNoSniff,
+			ReferrerPolicy:        cfg.Security.ReferrerPolicy,
+			PermissionsPolicy:     cfg.Security.PermissionsPolicy,
+			XContentTypeOptions:   "nosniff",
+			XDNSPrefetchControl:   "off",
+			XDownloadOptions:      "noopen",
+			XPermittedCrossDomain: "none",
+			RemoveHeaders:         []string{"Server", "X-Powered-By"},
+			Logger:                logger,
+		},
+		CSP: &security.CSPConfig{
+			Enabled:    cfg.Security.CSPEnabled,
+			ReportOnly: cfg.Security.CSPReportOnly,
+			Directives: security.DefaultCSPDirectives(),
+			Logger:     logger,
+		},
+		CORS: &security.CORSConfig{
+			Enabled:          true,
+			AllowOrigins:     []string{cfg.App.ClientURL},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
+			ExposeHeaders:    []string{"X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"},
+			AllowCredentials: true,
+			MaxAge:           86400,
+			Logger:           logger,
+		},
+		CSRF: &security.CSRFConfig{
+			Enabled:        cfg.Security.CSRFEnabled,
+			CookieSecure:   cfg.Security.CSRFCookieSecure,
+			CookieSameSite: sameSite,
+			TokenLookup:    "header:X-CSRF-Token",
+			SkipPaths:      []string{"/health", "/metrics"},
+			Logger:         logger,
+		},
+		Logger: logger,
+	}
 }

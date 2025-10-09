@@ -1,6 +1,8 @@
 import { User } from ".."
 
+// Matches backend: backend/internal/dto/search_filters.go SearchFilters
 export interface SearchFilters {
+  search_type?: 'all' | 'steamid' | 'nickname'
   min_rank?: number
   max_rank?: number
   min_matches?: number
@@ -13,14 +15,15 @@ export interface SearchFilters {
   sort_order?: 'asc' | 'desc'
 }
 
+// Matches backend: backend/internal/dto/search_result.go SearchResult
 export interface SearchResponse {
   query?: string
   searchType?: string
   searchTime?: number
-  totalCount: number
+  total_count: number
   page: number
-  pageSize: number
-  totalPages: number
+  page_size: number
+  total_pages: number
   results: User[]
 }
 
@@ -36,28 +39,28 @@ export interface FilteredSearchResponse {
   query: string
   filters: SearchFilters
   searchTime?: number
-  totalCount: number
+  total_count: number
   page: number
-  pageSize: number
-  totalPages: number
+  page_size: number
+  total_pages: number
   results: User[]
 }
 
 export interface PopularPlayersResponse {
   searchTime?: number
-  totalCount: number
+  total_count: number
   page: number
-  pageSize: number
-  totalPages: number
+  page_size: number
+  total_pages: number
   results: User[]
 }
 
 export interface RecentlyActiveResponse {
   searchTime?: number
-  totalCount: number
+  total_count: number
   page: number
-  pageSize: number
-  totalPages: number
+  page_size: number
+  total_pages: number
   results: User[]
 }
 
@@ -75,10 +78,10 @@ export interface SearchDebugResponse {
   query: string
   searchType: string
   searchTime: number
-  totalCount: number
+  total_count: number
   page: number
-  pageSize: number
-  totalPages: number
+  page_size: number
+  total_pages: number
   results: User[]
   debugInfo: SearchDebugInfo[]
 }

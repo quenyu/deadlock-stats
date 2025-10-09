@@ -28,4 +28,11 @@ export default tseslint.config([
       'no-alert': 'warn',
     },
   },
+  // Exception for logger internals
+  {
+    files: ['src/shared/lib/logger/**/*.ts'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
 ])

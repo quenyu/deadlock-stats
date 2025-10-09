@@ -7,13 +7,14 @@ import (
 )
 
 type Config struct {
-	Server   ServerConfig   `mapstructure:"server"`
-	Database DatabaseConfig `mapstructure:"database"`
-	Redis    RedisConfig    `mapstructure:"redis"`
-	Steam    SteamConfig    `mapstructure:"steam"`
-	JWT      JWTConfig      `mapstructure:"jwt"`
-	App      AppConfig      `mapstructure:"app"`
-	API      APIConfig      `mapstructure:"api"`
+	Server    ServerConfig    `mapstructure:"server"`
+	Database  DatabaseConfig  `mapstructure:"database"`
+	Redis     RedisConfig     `mapstructure:"redis"`
+	Steam     SteamConfig     `mapstructure:"steam"`
+	JWT       JWTConfig       `mapstructure:"jwt"`
+	App       AppConfig       `mapstructure:"app"`
+	API       APIConfig       `mapstructure:"api"`
+	RateLimit RateLimitConfig `mapstructure:"rate_limit"`
 }
 
 type APIConfig struct {
@@ -60,6 +61,17 @@ type JWTConfig struct {
 type SteamConfig struct {
 	RedirectURL string `mapstructure:"domain"`
 	APIKey      string `mapstructure:"steam_api_key"`
+}
+
+type RateLimitConfig struct {
+	Enabled           bool           `mapstructure:"enabled"`
+	Strategy          string         `mapstructure:"strategy"`
+	RequestsPerSecond int            `mapstructure:"requests_per_second"`
+	Burst             int            `mapstructure:"burst"`
+	UseRedis          bool           `mapstructure:"use_redis"`
+	PerEndpoint       map[string]int `mapstructure:"per_endpoint"`
+	Whitelist         []string       `mapstructure:"whitelist"`
+	TrustedProxies    []string       `mapstructure:"trusted_proxies"`
 }
 
 func LoadConfig(path string) (*Config, error) {

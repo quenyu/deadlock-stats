@@ -3,6 +3,7 @@ package dto
 import "fmt"
 
 type SearchFilters struct {
+	SearchType string  `json:"search_type"` // "all", "steamid", "nickname"
 	MinRank    int     `json:"min_rank"`
 	MaxRank    int     `json:"max_rank"`
 	MinMatches int     `json:"min_matches"`
@@ -65,4 +66,11 @@ func (f *SearchFilters) GetDefaultSortOrder() string {
 		return "asc"
 	}
 	return f.SortOrder
+}
+
+func (f *SearchFilters) GetSearchType() string {
+	if f.SearchType == "" {
+		return "all"
+	}
+	return f.SearchType
 }

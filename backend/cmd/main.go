@@ -209,7 +209,7 @@ func main() {
 	v1Group.GET("/authors/:author_id/crosshairs", crosshairHandler.GetByAuthorID)
 
 	// Logout route
-	authGroup.GET("/logout", authHandler.LogoutHandler)
+	v1Group.POST("/auth/logout", authHandler.LogoutHandler)
 
 	// Protected routes
 	protectedGroup := v1Group.Group("")
@@ -341,7 +341,7 @@ func buildSecurityConfig(cfg *config.Config, logger *zap.Logger) *security.Manag
 			Enabled:          true,
 			AllowOrigins:     []string{cfg.App.ClientURL},
 			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token", "X-Request-ID"},
 			ExposeHeaders:    []string{"X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"},
 			AllowCredentials: true,
 			MaxAge:           86400,

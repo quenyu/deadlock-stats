@@ -50,14 +50,14 @@ func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 	}
 
 	response := echo.Map{
-		"results":    result.Results,
-		"totalCount": result.TotalCount,
-		"page":       result.Page,
-		"pageSize":   result.PageSize,
-		"totalPages": result.TotalPages,
-		"searchType": searchType,
-		"searchTime": searchTime.Milliseconds(),
-		"query":      query,
+		"results":     result.Results,
+		"total_count": result.TotalCount,
+		"page":        result.Page,
+		"page_size":   result.PageSize,
+		"total_pages": result.TotalPages,
+		"searchType":  searchType,
+		"searchTime":  searchTime.Milliseconds(),
+		"query":       query,
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -123,14 +123,14 @@ func (h *PlayerSearchHandler) SearchPlayersWithFilters(c echo.Context) error {
 	}
 
 	response := echo.Map{
-		"query":      query,
-		"filters":    filters,
-		"results":    result.Results,
-		"totalCount": result.TotalCount,
-		"page":       result.Page,
-		"pageSize":   result.PageSize,
-		"totalPages": result.TotalPages,
-		"searchTime": searchTime.Milliseconds(),
+		"query":       query,
+		"filters":     filters,
+		"results":     result.Results,
+		"total_count": result.TotalCount,
+		"page":        result.Page,
+		"page_size":   result.PageSize,
+		"total_pages": result.TotalPages,
+		"searchTime":  searchTime.Milliseconds(),
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -148,12 +148,12 @@ func (h *PlayerSearchHandler) GetPopularPlayers(c echo.Context) error {
 	}
 
 	response := echo.Map{
-		"results":    result.Results,
-		"totalCount": result.TotalCount,
-		"page":       result.Page,
-		"pageSize":   result.PageSize,
-		"totalPages": result.TotalPages,
-		"searchTime": searchTime.Milliseconds(),
+		"results":     result.Results,
+		"total_count": result.TotalCount,
+		"page":        result.Page,
+		"page_size":   result.PageSize,
+		"total_pages": result.TotalPages,
+		"searchTime":  searchTime.Milliseconds(),
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -171,12 +171,12 @@ func (h *PlayerSearchHandler) GetRecentlyActivePlayers(c echo.Context) error {
 	}
 
 	response := echo.Map{
-		"results":    result.Results,
-		"totalCount": result.TotalCount,
-		"page":       result.Page,
-		"pageSize":   result.PageSize,
-		"totalPages": result.TotalPages,
-		"searchTime": searchTime.Milliseconds(),
+		"results":     result.Results,
+		"total_count": result.TotalCount,
+		"page":        result.Page,
+		"page_size":   result.PageSize,
+		"total_pages": result.TotalPages,
+		"searchTime":  searchTime.Milliseconds(),
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -214,15 +214,15 @@ func (h *PlayerSearchHandler) SearchPlayersDebug(c echo.Context) error {
 	}
 
 	response := echo.Map{
-		"query":      query,
-		"searchType": searchType,
-		"searchTime": searchTime.Milliseconds(),
-		"totalCount": result.TotalCount,
-		"page":       result.Page,
-		"pageSize":   result.PageSize,
-		"totalPages": result.TotalPages,
-		"results":    result.Results,
-		"debugInfo":  debugInfo,
+		"query":       query,
+		"searchType":  searchType,
+		"searchTime":  searchTime.Milliseconds(),
+		"total_count": result.TotalCount,
+		"page":        result.Page,
+		"page_size":   result.PageSize,
+		"total_pages": result.TotalPages,
+		"results":     result.Results,
+		"debugInfo":   debugInfo,
 	}
 
 	return c.JSON(http.StatusOK, response)
@@ -254,8 +254,9 @@ func parseLimit(c echo.Context, defaultLimit, maxLimit int) int {
 
 func parseSearchFilters(c echo.Context) dto.SearchFilters {
 	filters := dto.SearchFilters{
-		SortBy:    c.QueryParam("sort_by"),
-		SortOrder: c.QueryParam("sort_order"),
+		SearchType: c.QueryParam("searchType"),
+		SortBy:     c.QueryParam("sort_by"),
+		SortOrder:  c.QueryParam("sort_order"),
 	}
 	if filters.SortBy == "" {
 		filters.SortBy = "nickname"

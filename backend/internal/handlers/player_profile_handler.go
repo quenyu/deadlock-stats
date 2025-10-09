@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/quenyu/deadlock-stats/internal/domain"
 	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
 	"github.com/quenyu/deadlock-stats/internal/validators"
@@ -86,23 +87,21 @@ func (h *PlayerProfileHandler) GetRecentMatches(c echo.Context) error {
 		limit = val
 	}
 
-	start := time.Now()
 	matches, err := h.service.GetRecentMatches(c.Request().Context(), steamID)
-	loadTime := time.Since(start)
 
 	if err != nil {
 		return ErrorHandler(err, c)
 	}
 
-	if len(matches) == 0 {
-		return ErrorHandler(cErrors.ErrMatchNotFound, c)
+	if matches == nil {
+		matches = []domain.Match{}
 	}
 
 	response := echo.Map{
-		"steamID":  steamID,
-		"limit":    limit,
-		"loadTime": loadTime.Milliseconds(),
-		"matches":  matches,
+		"matches": matches,
+		"total":   len(matches),
+		"page":    1,
+		"limit":   limit,
 	}
 
 	return c.JSON(http.StatusOK, response)

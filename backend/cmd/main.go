@@ -17,7 +17,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/config"
-	"github.com/quenyu/deadlock-stats/internal/database"
+	"github.com/quenyu/deadlock-stats/internal/database/pool"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
 	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
@@ -37,9 +37,24 @@ func main() {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	var poolManager *database.PoolManager
+	poolConfig := &pool.Config{
+		Host:                cfg.Database.Host,
+		Port:                cfg.Database.Port,
+		User:                cfg.Database.User,
+		Password:            cfg.Database.Password,
+		DBName:              cfg.Database.Name,
+		SSLMode:             cfg.Database.SSLMode,
+		MaxOpenConns:        cfg.Database.Pool.MaxOpenConns,
+		MaxIdleConns:        cfg.Database.Pool.MaxIdleConns,
+		ConnMaxLifetime:     cfg.Database.Pool.ConnMaxLifetime,
+		ConnMaxIdleTime:     cfg.Database.Pool.ConnMaxIdleTime,
+		HealthCheckInterval: cfg.Database.Pool.HealthCheckInterval,
+		EnableMetrics:       cfg.Database.Pool.EnableMetrics,
+	}
+
+	var poolManager *pool.Manager
 	for i := 0; i < 5; i++ {
-		poolManager, err = database.NewPoolManager(&cfg.Database, logger)
+		poolManager, err = pool.NewManager(poolConfig, logger)
 		if err == nil {
 			break
 		}

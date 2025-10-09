@@ -4,16 +4,16 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-	"github.com/quenyu/deadlock-stats/internal/database"
+	"github.com/quenyu/deadlock-stats/internal/database/pool"
 	"go.uber.org/zap"
 )
 
 type HealthHandler struct {
-	poolManager *database.PoolManager
+	poolManager *pool.Manager
 	logger      *zap.Logger
 }
 
-func NewHealthHandler(poolManager *database.PoolManager, logger *zap.Logger) *HealthHandler {
+func NewHealthHandler(poolManager *pool.Manager, logger *zap.Logger) *HealthHandler {
 	return &HealthHandler{
 		poolManager: poolManager,
 		logger:      logger,

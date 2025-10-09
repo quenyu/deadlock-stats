@@ -43,7 +43,7 @@ export function AuthWidget() {
   }
 
   if (error) {
-    log.error('Authentication error', error)
+    log.error('Authentication error', { error })
     return <AuthBySteamButton />
   }
 

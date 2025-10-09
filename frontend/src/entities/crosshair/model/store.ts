@@ -59,11 +59,9 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
     try {
       const data = await fetchPublishedCrosshairs()
       set({ published: data.crosshairs, loading: false })
-    } catch (error) {
-      logger.error('Failed to load published crosshairs', error)
-    } finally {
-      set({ loading: false })
-      const errorMessage = extractErrorMessage(error, 'Failed to load published crosshairs')
+    } catch (err) {
+      logger.error('Failed to load published crosshairs', { error: err })
+      const errorMessage = extractErrorMessage(err, 'Failed to load published crosshairs')
       set({ error: errorMessage, loading: false })
     }
   },
@@ -79,7 +77,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       })
       await get().loadPublished()
     } catch (error) {
-      logger.error('Failed to publish crosshair', error)
+      logger.error('Failed to publish crosshair', { error })
       const errorMessage = extractErrorMessage(error, 'Failed to publish crosshair')
       set({ error: errorMessage })
       throw error
@@ -91,7 +89,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       await likeCrosshair(id)
       await get().loadPublished()
     } catch (error) {
-      logger.error('Failed to like crosshair', error)
+      logger.error('Failed to like crosshair', { error })
       const errorMessage = extractErrorMessage(error, 'Failed to like crosshair')
       set({ error: errorMessage })
       throw error
@@ -103,7 +101,7 @@ export const useCrosshairStore = create<CrosshairStore>((set, get) => ({
       await unlikeCrosshair(id)
       await get().loadPublished()
     } catch (error) {
-      logger.error('Failed to unlike crosshair', error)
+      logger.error('Failed to unlike crosshair', { error })
       const errorMessage = extractErrorMessage(error, 'Failed to unlike crosshair')
       set({ error: errorMessage })
       throw error

@@ -7,12 +7,12 @@ import { queryKeys } from '../config'
 import { api } from '@/shared/api/api'
 import {
   playerSearchResponseSchema,
-  playerProfileSchema,
+  extendedPlayerProfileSchema,
   recentMatchesResponseSchema,
 } from '@/shared/lib/validation'
 import type {
   PlayerSearchResponse,
-  PlayerProfile,
+  ExtendedPlayerProfile,
   RecentMatchesResponse,
 } from '@/shared/lib/validation'
 import { validateApiResponse } from '@/shared/lib/validation'
@@ -39,15 +39,15 @@ export function usePlayerSearch(query: string, enabled = true) {
 }
 
 /**
- * Get player profile
+ * Get player profile (extended with stats)
  */
 export function usePlayerProfile(steamId: string, enabled = true) {
   return useQuery({
     queryKey: queryKeys.player.profile(steamId),
-    queryFn: async (): Promise<PlayerProfile> => {
+    queryFn: async (): Promise<ExtendedPlayerProfile> => {
       const response = await api.get(`/players/${steamId}`)
       return validateApiResponse(
-        playerProfileSchema,
+        extendedPlayerProfileSchema,
         response.data,
         `/players/${steamId}`
       )
@@ -99,7 +99,7 @@ export function usePrefetchPlayerProfile() {
       queryFn: async () => {
         const response = await api.get(`/players/${steamId}`)
         return validateApiResponse(
-          playerProfileSchema,
+          extendedPlayerProfileSchema,
           response.data,
           `/players/${steamId}`
         )

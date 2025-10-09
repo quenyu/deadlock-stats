@@ -15,10 +15,10 @@ export const usePlayerSearch = () => {
     if (query.length < 2) {
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
+        page_size: 10, 
+        total_pages: 0, 
         searchTime: 0 
       }
     }
@@ -34,10 +34,10 @@ export const usePlayerSearch = () => {
       setError(errorMessage)
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
+        page_size: 10, 
+        total_pages: 0, 
         searchTime: 0 
       }
     } finally {
@@ -74,12 +74,13 @@ export const usePlayerSearch = () => {
     if (query.length < 2) {
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 20, 
-        totalPages: 0, 
+        page_size: 20, 
+        total_pages: 0, 
         searchTime: 0, 
-        filters 
+        filters,
+        query
       }
     }
 
@@ -94,12 +95,13 @@ export const usePlayerSearch = () => {
       setError(errorMessage)
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 20, 
-        totalPages: 0, 
+        page_size: 20, 
+        total_pages: 0, 
         searchTime: 0, 
-        filters 
+        filters,
+        query
       }
     } finally {
       setLoading(false)
@@ -118,10 +120,10 @@ export const usePlayerSearch = () => {
       setError(errorMessage)
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
+        page_size: 10, 
+        total_pages: 0, 
         searchTime: 0 
       }
     } finally {
@@ -141,10 +143,10 @@ export const usePlayerSearch = () => {
       setError(errorMessage)
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
+        page_size: 10, 
+        total_pages: 0, 
         searchTime: 0 
       }
     } finally {
@@ -161,11 +163,13 @@ export const usePlayerSearch = () => {
     if (query.length < 2) {
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
-        searchTime: 0, 
+        page_size: 10, 
+        total_pages: 0, 
+        searchTime: 0,
+        searchType,
+        query,
         debugInfo: [] 
       }
     }
@@ -181,11 +185,13 @@ export const usePlayerSearch = () => {
       setError(errorMessage)
       return { 
         results: [], 
-        totalCount: 0, 
+        total_count: 0, 
         page: 1, 
-        pageSize: 10, 
-        totalPages: 0, 
-        searchTime: 0, 
+        page_size: 10, 
+        total_pages: 0, 
+        searchTime: 0,
+        searchType,
+        query,
         debugInfo: [] 
       }
     } finally {

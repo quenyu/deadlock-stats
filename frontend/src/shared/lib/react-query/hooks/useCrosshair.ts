@@ -182,7 +182,7 @@ export function useLikeCrosshair() {
       if (previousCrosshair) {
         queryClient.setQueryData(queryKeys.crosshair.detail(id), {
           ...previousCrosshair,
-          likes: previousCrosshair.likes + 1,
+          likes_count: previousCrosshair.likes_count + 1,
         })
       }
       
@@ -226,7 +226,7 @@ export function useUnlikeCrosshair() {
       if (previousCrosshair) {
         queryClient.setQueryData(queryKeys.crosshair.detail(id), {
           ...previousCrosshair,
-          likes: Math.max(0, previousCrosshair.likes - 1),
+          likes_count: Math.max(0, previousCrosshair.likes_count - 1),
         })
       }
       

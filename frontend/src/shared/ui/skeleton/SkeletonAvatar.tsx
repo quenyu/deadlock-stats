@@ -3,7 +3,6 @@
  */
 
 import { Skeleton, SkeletonProps } from './Skeleton'
-import { cn } from '@/shared/lib/utils'
 
 export interface SkeletonAvatarProps extends Omit<SkeletonProps, 'variant'> {
   /** Avatar size */

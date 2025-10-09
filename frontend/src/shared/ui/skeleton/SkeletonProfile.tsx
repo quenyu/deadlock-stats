@@ -4,7 +4,6 @@
 
 import { Skeleton } from './Skeleton'
 import { SkeletonAvatar } from './SkeletonAvatar'
-import { SkeletonText } from './SkeletonText'
 import { cn } from '@/shared/lib/utils'
 
 export interface SkeletonProfileProps {

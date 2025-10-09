@@ -21,12 +21,15 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar'
 import { useEffect } from 'react'
 import { AppLink } from '@/shared/ui/AppLink/AppLink'
 import { routes } from '@/shared/constants/routes'
+import { createLogger } from '@/shared/lib/logger'
+
+const log = createLogger('AuthWidget')
 
 export function AuthWidget() {
   const { user, isLoading, error } = useUserStore()
 
   useEffect(() => {
-    console.log('[AuthWidget] Rendering with:', {
+    log.debug('Rendering with state', {
       user: user ? `${user.nickname} (${user.id})` : 'null',
       isLoading,
       error,
@@ -40,7 +43,7 @@ export function AuthWidget() {
   }
 
   if (error) {
-    console.error('AuthWidget error:', error)
+    log.error('Authentication error', error)
     return <AuthBySteamButton />
   }
 

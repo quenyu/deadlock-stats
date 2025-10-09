@@ -2,6 +2,7 @@ import { useCrosshairStore } from '@/entities/crosshair/model/store'
 import { Button } from '@/shared/ui/button'
 import { Badge } from '@/shared/ui/badge'
 import { HeartIcon } from 'lucide-react'
+import { logger } from '@/shared/lib/logger'
 
 interface LikeButtonProps {
   crosshairId: string
@@ -21,7 +22,7 @@ export const LikeButton: React.FC<LikeButtonProps> = ({ crosshairId, liked, like
         await like(crosshairId)
       }
     } catch (error) {
-      console.error('Failed to toggle like:', error)
+      logger.error('Failed to toggle like', error, { crosshairId, liked })
     }
   }
 

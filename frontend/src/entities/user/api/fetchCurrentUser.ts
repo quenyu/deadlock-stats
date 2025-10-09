@@ -1,6 +1,7 @@
 import { api } from '@/shared/api/api';
 import { User } from '../types/types';
 import axios from 'axios';
+import { logger } from '@/shared/lib/logger';
 
 export const fetchCurrentUser = async () => {
     try {
@@ -13,17 +14,20 @@ export const fetchCurrentUser = async () => {
       return null;
     } catch (error) {
       if (axios.isAxiosError(error)) {
-        console.error('API Error:', error.response?.status, error.response?.data);
+        logger.error('API Error during user fetch', error, {
+          status: error.response?.status,
+          data: error.response?.data
+        });
         
         if (error.response?.status === 401) {
-          console.log('User not authenticated');
+          logger.info('User not authenticated');
           return null;
         }
       }
       
       const errorMessage =
         error instanceof Error ? error.message : 'An unknown error occurred';
-      console.error('Error fetching user:', errorMessage);
+      logger.error('Error fetching user', error);
       throw new Error(errorMessage);
     }
 }

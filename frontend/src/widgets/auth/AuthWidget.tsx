@@ -14,42 +14,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu'
-import { useUserStore } from '@/entities/user'
 import { AuthBySteamButton } from '@/features/AuthBySteam'
 import { Button } from '@/shared/ui/button'
 import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar'
-import { useEffect } from 'react'
 import { AppLink } from '@/shared/ui/AppLink/AppLink'
 import { routes } from '@/shared/constants/routes'
-import { createLogger } from '@/shared/lib/logger'
-
-const log = createLogger('AuthWidget')
+import { useCurrentUser, useLogout } from '@/shared/lib/react-query/hooks'
+import { Skeleton } from '@/shared/ui/skeleton'
 
 export function AuthWidget() {
-  const { user, isLoading, error } = useUserStore()
-
-  useEffect(() => {
-    log.debug('Rendering with state', {
-      user: user ? `${user.nickname} (${user.id})` : 'null',
-      isLoading,
-      error,
-    })
-  }, [user, isLoading, error])
+  const { data: userFromSchema, isLoading } = useCurrentUser()
+  const { mutate: logout } = useLogout()
 
   if (isLoading) {
-    return (
-      <div className="h-8 w-28 animate-pulse rounded-md bg-muted" />
-    )
+    return <Skeleton width={112} height={32} variant="rounded" />
   }
 
-  if (error) {
-    log.error('Authentication error', { error })
+  if (!userFromSchema) {
     return <AuthBySteamButton />
   }
 
-  if (!user) {
-    return <AuthBySteamButton />
-  }
+  // Normalize for display
+  const displayName = userFromSchema.nickname
+  const avatarUrl = userFromSchema.avatar_url || ''
+  const steamId = userFromSchema.steam_id
+  const profileUrl = userFromSchema.profile_url || `https://steamcommunity.com/profiles/${steamId}`
 
   return (
     <DropdownMenu>
@@ -60,31 +49,31 @@ export function AuthWidget() {
           className="flex items-center gap-2 p-2 h-auto focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           <Avatar className="h-8 w-8">
-            <AvatarImage src={user.avatar_url} alt={user.nickname} />
+            <AvatarImage src={avatarUrl} alt={displayName} />
             <AvatarFallback>
-              {user.nickname.charAt(0).toUpperCase()}
+              {displayName.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium hidden sm:inline-block">{user.nickname}</span>
+          <span className="text-sm font-medium hidden sm:inline-block">{displayName}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-56" align="end" forceMount>
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{user.nickname}</p>
+            <p className="text-sm font-medium leading-none">{displayName}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuItem asChild>
-            <AppLink to={routes.player.profile(user.steam_id)}>
+            <AppLink to={routes.player.profile(steamId)}>
               <UserIcon className="mr-2 h-4 w-4" />
               <span>Profile</span>
             </AppLink>
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a
-              href={user.profile_url}
+              href={profileUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center"
@@ -103,7 +92,7 @@ export function AuthWidget() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onSelect={() => useUserStore.getState().logout()}>
+        <DropdownMenuItem onSelect={() => logout()}>
           <LogOut className="mr-2 h-4 w-4" />
           <span>Logout</span>
         </DropdownMenuItem>

@@ -17,6 +17,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// Extend axios types to support custom flags
+declare module 'axios' {
+  export interface AxiosRequestConfig {
+    skipAuthErrorToast?: boolean
+  }
+  export interface InternalAxiosRequestConfig {
+    skipAuthErrorToast?: boolean
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
@@ -25,10 +35,18 @@ api.interceptors.response.use(
 
     // Handle 401 Unauthorized
     if (status === 401) {
+      const hadToken = localStorage.getItem('token') !== null
       localStorage.removeItem('token')
-      toast.error('Session expired. Please log in again.')
-      // Optionally redirect to login
-      // window.location.href = '/login'
+      
+      // Only show toast if:
+      // 1. User had a token (was previously authenticated)
+      // 2. Request doesn't have skipAuthErrorToast flag
+      // 3. Not a /users/me request (initial auth check)
+      const isAuthCheckRequest = config?.url?.includes('/users/me')
+      
+      if (hadToken && !config?.skipAuthErrorToast && !isAuthCheckRequest) {
+        toast.error('Session expired. Please log in again.')
+      }
     }
 
     // Handle 403 Forbidden

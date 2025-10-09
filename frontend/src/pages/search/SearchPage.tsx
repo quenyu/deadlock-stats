@@ -1,82 +1,41 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Input } from '@/shared/ui/input'
-import { api } from '@/shared/api/api'
-import { type User } from '@/entities/user'
 import { routes } from '@/shared/constants/routes'
 import React from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
 import { PaginatedResults } from '@/shared/ui/PaginatedResults'
 import { PageSizeSelector } from '@/shared/ui/PageSizeSelector'
+import { usePlayerSearch } from '@/shared/lib/react-query/hooks'
+import { SkeletonList } from '@/shared/ui/skeleton'
 import { createLogger } from '@/shared/lib/logger'
+import { PlayerSearchResult } from '@/shared/lib/validation'
+import { User } from '@/entities/user'
+
+type UserCardData = PlayerSearchResult | User
 
 const log = createLogger('SearchPage')
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('')
   const [searchType, setSearchType] = useState('nickname')
-  const [results, setResults] = useState<User[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
-  const [totalCount, setTotalCount] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (searchType === 'nickname' && query.length < 3) {
-      setResults([])
-      setError(null)
-      setTotalCount(0)
-      setTotalPages(0)
-      return
-    }
-    if (query.length === 0) {
-      setResults([])
-      setError(null)
-      setTotalCount(0)
-      setTotalPages(0)
-      return
-    }
+  const shouldSearch = searchType === 'nickname' ? query.length >= 3 : query.length > 0
+  
+  const { data, isLoading, error } = usePlayerSearch(query, shouldSearch)
+  
+  const results = data?.players || []
+  const totalCount = data?.meta.total_count || 0
+  const totalPages = data?.meta.total_pages || 0
 
-    const fetchResults = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const response = await api.get(`/players/search?q=${query}&type=${searchType}&page=${page}&pageSize=${pageSize}`)
-
-        log.debug('Search results received', { 
-          resultCount: response.data.results?.length || response.data.length,
-          totalCount: response.data.total_count 
-        })
-
-        setResults(response.data.results || response.data)
-        setTotalCount(response.data.total_count || response.data.length)
-        setTotalPages(response.data.total_pages || 1)
-        
-        if ((response.data.results || response.data).length === 0) {
-          setError('No players found.')
-        }
-      } catch (err) {
-        setError('Failed to search for players.')
-        log.error('Search failed', { error: err })
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const debounceTimeout = setTimeout(fetchResults, 300)
-    return () => clearTimeout(debounceTimeout)
-  }, [query, searchType, page, pageSize])
-
-  useEffect(() => {
-    setPage(1)
-  }, [query, searchType])
-
-  const handleUserClick = (user: User) => {
+  const handleUserClick = (user: UserCardData) => {
     // Переход на профиль пользователя
-    window.location.href = routes.player.profile(user.steam_id)
+    const steamId = 'steamId' in user ? user.steamId : ('steam_id' in user ? user.steam_id : '')
+    navigate(routes.player.profile(steamId))
   }
 
   log.debug('Current search results', { count: results.length })
@@ -115,7 +74,7 @@ export const SearchPage = () => {
       </div>
 
       <div className="mt-8">
-        {error && <div className="text-center text-red-500 mb-4">{error}</div>}
+        {error && <div className="text-center text-red-500 mb-4">{error.message}</div>}
         
         {totalCount > 0 && (
           <div className="flex justify-end mb-4">
@@ -129,17 +88,29 @@ export const SearchPage = () => {
           </div>
         )}
         
-        <PaginatedResults
-          results={results}
-          totalCount={totalCount}
-          page={page}
-          pageSize={pageSize}
-          totalPages={totalPages}
-          onPageChange={setPage}
-          onUserClick={handleUserClick}
-          showExtendedInfo={true}
-          loading={loading}
-        />
+        {isLoading ? (
+          <SkeletonList count={pageSize} showAvatar avatarSize={48} lines={2} />
+        ) : error ? (
+          <div className="text-center py-8 text-destructive">
+            Failed to search for players.
+          </div>
+        ) : results.length === 0 && shouldSearch ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No players found.
+          </div>
+        ) : (
+          <PaginatedResults
+            results={results}
+            totalCount={totalCount}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onUserClick={handleUserClick}
+            showExtendedInfo={true}
+            loading={false}
+          />
+        )}
       </div>
     </div>
   )

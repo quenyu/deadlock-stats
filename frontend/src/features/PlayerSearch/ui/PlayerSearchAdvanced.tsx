@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Filter, Users, Clock } from 'lucide-react'
 import { Input } from '@/shared/ui/input'
 import { Button } from '@/shared/ui/button'
@@ -26,10 +27,12 @@ export const PlayerSearchAdvanced = ({
   const [query, setQuery] = useState('')
   const [searchType, setSearchType] = useState<SearchType>('all')
   const [filters, setFilters] = useState<SearchFilters>({
+    search_type: 'all',
     sort_by: 'nickname',
     sort_order: 'asc'
   })
   const [showFilterPanel, setShowFilterPanel] = useState(false)
+  const navigate = useNavigate()
   
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(20)
@@ -49,6 +52,10 @@ export const PlayerSearchAdvanced = ({
   const [searchStats, setSearchStats] = useState<{ totalFound: number; searchTime: number }>({ totalFound: 0, searchTime: 0 })
 
   useEffect(() => {
+    setFilters(prev => ({ ...prev, search_type: searchType }))
+  }, [searchType])
+
+  useEffect(() => {
     if (query.length < 2) {
       setSearchResults([])
       setSearchStats({ totalFound: 0, searchTime: 0 })
@@ -59,9 +66,9 @@ export const PlayerSearchAdvanced = ({
     const fetchResults = async () => {
       const response = await searchWithFilters(query, filters, page, pageSize)
       setSearchResults(response.results)
-      setTotalCount(response.totalCount)
+      setTotalCount(response.total_count)
       setSearchStats({
-        totalFound: response.totalCount,
+        totalFound: response.total_count,
         searchTime: response.searchTime || 0
       })
     }
@@ -95,7 +102,7 @@ export const PlayerSearchAdvanced = ({
   }, [showRecentlyActive, query, getRecentlyActivePlayers])
 
   const handleUserClick = (user: any) => {
-    window.location.href = routes.player.profile(user.steam_id)
+    navigate(routes.player.profile(user.steam_id))
   }
 
   const filteredResults = searchResults
@@ -236,7 +243,11 @@ export const PlayerSearchAdvanced = ({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {popularPlayers.map((player, index) => (
-                  <Card key={player.id || index} className="hover:shadow-md transition-shadow">
+                  <Card 
+                    key={player.id || index} 
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(player)}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">
@@ -265,7 +276,11 @@ export const PlayerSearchAdvanced = ({
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {recentlyActivePlayers.map((player, index) => (
-                  <Card key={player.id || index} className="hover:shadow-md transition-shadow">
+                  <Card 
+                    key={player.id || index} 
+                    className="hover:shadow-md transition-shadow cursor-pointer"
+                    onClick={() => handleUserClick(player)}
+                  >
                     <CardContent className="p-4">
                       <div className="flex items-center gap-4">
                         <Avatar className="h-12 w-12">

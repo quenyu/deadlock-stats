@@ -17,6 +17,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/config"
+	"github.com/quenyu/deadlock-stats/internal/database"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
 	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
@@ -36,26 +37,37 @@ func main() {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	var db *gorm.DB
+	var poolManager *database.PoolManager
 	for i := 0; i < 5; i++ {
-		db, err = connectDB(cfg.Database)
+		poolManager, err = database.NewPoolManager(&cfg.Database, logger)
 		if err == nil {
 			break
 		}
-		logger.Warn("failed to connect to database, retrying in 5 seconds...", zap.Error(err))
+		logger.Warn("failed to initialize database pool, retrying in 5 seconds...",
+			zap.Error(err),
+			zap.Int("attempt", i+1),
+		)
 		time.Sleep(5 * time.Second)
 	}
 
 	if err != nil {
-		logger.Fatal("failed to connect to database after multiple retries", zap.Error(err))
+		logger.Fatal("failed to initialize database pool after multiple retries", zap.Error(err))
 	}
+
+	if err := poolManager.WaitForHealthy(30 * time.Second); err != nil {
+		logger.Fatal("database did not become healthy", zap.Error(err))
+	}
+
+	db := poolManager.DB()
+	sqlDB := poolManager.SqlDB()
+
+	defer func() {
+		if err := poolManager.Close(); err != nil {
+			logger.Error("error closing database pool", zap.Error(err))
+		}
+	}()
 
 	rdb := connectRedis(cfg.Redis, logger)
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		logger.Fatal("failed to get underlying sql.DB", zap.Error(err))
-	}
 
 	if err := runMigrations(sqlDB, logger); err != nil {
 		logger.Fatal("failed to run migrations", zap.Error(err))
@@ -97,6 +109,7 @@ func main() {
 	playerSearchHandler := handlers.NewPlayerSearchHandler(playerSearchService, logger)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
 	crosshairHandler := handlers.NewCrosshairHandler(crosshairService)
+	healthHandler := handlers.NewHealthHandler(poolManager, logger)
 	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
 	e := echo.New()
@@ -210,12 +223,9 @@ func main() {
 	protectedGroup.DELETE("/crosshairs/:id/like", crosshairHandler.Unlike)
 	protectedGroup.DELETE("/crosshairs/:id", crosshairHandler.Delete)
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"status":  "ok",
-			"version": viper.GetString("app.version"),
-		})
-	})
+	e.GET("/health", healthHandler.HealthCheck)
+	e.GET("/health/detailed", healthHandler.HealthCheckDetailed)
+	e.GET("/metrics/db", healthHandler.MetricsHandler)
 
 	go func() {
 		port := viper.GetString("server.port")
@@ -256,6 +266,8 @@ func connectRedis(cfg config.RedisConfig, logger *zap.Logger) *redis.Client {
 	return rdb
 }
 
+// connectDB is deprecated - use database.NewPoolManager instead
+// Kept for backwards compatibility
 func connectDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.Port, cfg.SSLMode)

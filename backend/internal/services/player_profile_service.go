@@ -10,13 +10,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/domain"
 	"github.com/quenyu/deadlock-stats/internal/dto"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 type PlayerProfileService struct {
@@ -163,51 +164,55 @@ func (s *PlayerProfileService) fetchAllData(ctx context.Context, steamID string)
 	var profile *domain.PlayerProfile
 	var heroMMRHistory []domain.HeroMMRHistory
 
-	var wg sync.WaitGroup
-	errs := make(chan error, 4)
+	g, ctx := errgroup.WithContext(apiCtx)
 
-	wg.Add(4)
-	go func() {
-		defer wg.Done()
-		profile, _ = s.playerProfileRepository.FindBySteamID(ctx, steamID)
-	}()
-	go func() {
-		defer wg.Done()
+	g.Go(func() error {
+		var err error
+		profile, err = s.playerProfileRepository.FindBySteamID(ctx, steamID)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+
+	g.Go(func() error {
+		var err error
+		matches, err = s.deadlockAPIClient.FetchMatchHistory(steamID)
+		return err
+	})
+
+	g.Go(func() error {
 		var err error
 		s.logger.Info("Fetching match history from API", zap.String("steamID", steamID))
 		matches, err = s.deadlockAPIClient.FetchMatchHistory(steamID)
 		if err != nil {
-			s.logger.Error("Failed to fetch match history", zap.String("steamID", steamID), zap.Error(err))
-			errs <- err
 			matches = []deadlockapi.DeadlockMatch{}
+			s.logger.Error("Failed to fetch match history", zap.String("steamID", steamID), zap.Error(err))
 		} else {
 			s.logger.Info("Successfully fetched match history", zap.String("steamID", steamID), zap.Int("matchesCount", len(matches)))
 		}
-	}()
-	go func() {
-		defer wg.Done()
+		return err
+	})
+
+	g.Go(func() error {
 		var err error
 		heroStats, err = s.deadlockAPIClient.FetchHeroStats(steamID)
 		if err != nil {
-			errs <- err
 			heroStats = []domain.HeroStat{}
 		}
-	}()
-	go func() {
-		defer wg.Done()
+		return err
+	})
+	g.Go(func() error {
 		var err error
 		mmrHistory, err = s.deadlockAPIClient.FetchMMRHistory(steamID)
 		if err != nil {
-			errs <- err
 			mmrHistory = []domain.DeadlockMMR{}
 		}
-	}()
+		return err
+	})
 
-	wg.Wait()
-	close(errs)
-
-	for err := range errs {
-		s.logger.Warn("Failed to fetch some data from Deadlock API", zap.Error(err))
+	if err := g.Wait(); err != nil {
+		s.logger.Warn("Some API calls failed", zap.Error(err))
 	}
 
 	if len(matches) == 0 && len(heroStats) == 0 {
@@ -796,41 +801,36 @@ func (s *PlayerProfileService) searchByNickname(ctx context.Context, query strin
 func (s *PlayerProfileService) fetchSearchResults(ctx context.Context, query string) ([]domain.User, []domain.SteamProfileSearch, error) {
 	var localResults []domain.User
 	var apiResults []domain.SteamProfileSearch
-	var wg sync.WaitGroup
-	errs := make(chan error, 2)
 
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
+	g, ctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
 		res, err := s.playerProfileRepository.SearchByNickname(ctx, query)
 		if err != nil {
-			errs <- err
-			return
+			return err
 		}
 		localResults = res
-	}()
+		return nil
+	})
 
-	go func() {
-		defer wg.Done()
-		searchResult, err := s.deadlockAPIClient.FetchSteamProfileSearch(query)
+	g.Go(func() error {
+		res, err := s.deadlockAPIClient.FetchSteamProfileSearch(query)
 		if err != nil {
 			s.logger.Warn("Failed to fetch from Deadlock API search", zap.Error(err))
-			return
+			return nil
 		}
-
 		const maxAPIResults = 25
-		if len(searchResult) > maxAPIResults {
-			apiResults = searchResult[:maxAPIResults]
+		if len(res) > maxAPIResults {
+			apiResults = res[:maxAPIResults]
 		} else {
-			apiResults = searchResult
+			apiResults = res
 		}
-	}()
+		return nil
+	})
 
-	wg.Wait()
-	close(errs)
-
-	for err := range errs {
+	if err := g.Wait(); err != nil {
 		s.logger.Error("Error during player search", zap.Error(err))
+		return nil, nil, err
 	}
 
 	return localResults, apiResults, nil

@@ -4,12 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
@@ -17,10 +17,14 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/config"
+	"github.com/quenyu/deadlock-stats/internal/database/pool"
 	"github.com/quenyu/deadlock-stats/internal/handlers"
 	customMiddleware "github.com/quenyu/deadlock-stats/internal/middleware"
+	"github.com/quenyu/deadlock-stats/internal/middleware/ratelimit"
+	"github.com/quenyu/deadlock-stats/internal/middleware/security"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
 	"github.com/quenyu/deadlock-stats/internal/services"
+	"github.com/redis/go-redis/v9"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
 	gorm_postgres "gorm.io/driver/postgres"
@@ -29,42 +33,77 @@ import (
 
 func main() {
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			logger.Sugar().Fatal(err)
+		}
+	}()
 
 	cfg, err := config.LoadConfig("./internal/config/config.yaml")
 	if err != nil {
 		logger.Fatal("failed to load config", zap.Error(err))
 	}
 
-	var db *gorm.DB
+	poolConfig := &pool.Config{
+		Host:                cfg.Database.Host,
+		Port:                cfg.Database.Port,
+		User:                cfg.Database.User,
+		Password:            cfg.Database.Password,
+		DBName:              cfg.Database.Name,
+		SSLMode:             cfg.Database.SSLMode,
+		MaxOpenConns:        cfg.Database.Pool.MaxOpenConns,
+		MaxIdleConns:        cfg.Database.Pool.MaxIdleConns,
+		ConnMaxLifetime:     cfg.Database.Pool.ConnMaxLifetime,
+		ConnMaxIdleTime:     cfg.Database.Pool.ConnMaxIdleTime,
+		HealthCheckInterval: cfg.Database.Pool.HealthCheckInterval,
+		EnableMetrics:       cfg.Database.Pool.EnableMetrics,
+	}
+
+	var poolManager *pool.Manager
 	for i := 0; i < 5; i++ {
-		db, err = connectDB(cfg.Database)
+		poolManager, err = pool.NewManager(poolConfig, logger)
 		if err == nil {
 			break
 		}
-		logger.Warn("failed to connect to database, retrying in 5 seconds...", zap.Error(err))
+		logger.Warn("failed to initialize database pool, retrying in 5 seconds...",
+			zap.Error(err),
+			zap.Int("attempt", i+1),
+		)
 		time.Sleep(5 * time.Second)
 	}
 
 	if err != nil {
-		logger.Fatal("failed to connect to database after multiple retries", zap.Error(err))
+		logger.Fatal("failed to initialize database pool after multiple retries", zap.Error(err))
 	}
+
+	if err := poolManager.WaitForHealthy(30 * time.Second); err != nil {
+		logger.Fatal("database did not become healthy", zap.Error(err))
+	}
+
+	db := poolManager.DB()
+	sqlDB := poolManager.SqlDB()
+
+	defer func() {
+		if err := poolManager.Close(); err != nil {
+			logger.Error("error closing database pool", zap.Error(err))
+		}
+	}()
 
 	rdb := connectRedis(cfg.Redis, logger)
-
-	sqlDB, err := db.DB()
-	if err != nil {
-		logger.Fatal("failed to get underlying sql.DB", zap.Error(err))
-	}
 
 	if err := runMigrations(sqlDB, logger); err != nil {
 		logger.Fatal("failed to run migrations", zap.Error(err))
 	}
 
 	staticDataService := services.NewStaticDataService(logger)
-	if err := staticDataService.LoadStaticData(); err != nil {
-		logger.Fatal("failed to load static data", zap.Error(err))
-	}
+
+	go func() {
+		if err := staticDataService.LoadStaticData(); err != nil {
+			logger.Error("failed to load static data", zap.Error(err))
+		} else {
+			logger.Info("static data loaded successfully")
+		}
+	}()
 
 	userRepository := repositories.NewUserRepository(db)
 	playerProfileRepository := repositories.NewPlayerProfilePostgresRepository(db)
@@ -97,6 +136,7 @@ func main() {
 	playerSearchHandler := handlers.NewPlayerSearchHandler(playerSearchService, logger)
 	playerProfileHandler := handlers.NewPlayerProfileHandler(playerProfileService)
 	crosshairHandler := handlers.NewCrosshairHandler(crosshairService)
+	healthHandler := handlers.NewHealthHandler(poolManager, logger)
 	jwtMiddleware := customMiddleware.NewJWTMiddleware(cfg)
 
 	e := echo.New()
@@ -104,12 +144,52 @@ func main() {
 	// Global middlewares
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins:     []string{cfg.App.ClientURL},
-		AllowMethods:     []string{echo.GET, echo.PUT, echo.POST, echo.DELETE, echo.OPTIONS},
-		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
-		AllowCredentials: true,
-	}))
+
+	// Security middleware (modular: Headers, CSP, CORS, CSRF)
+	securityManager := security.NewManager(buildSecurityConfig(cfg, logger))
+	e.Use(securityManager.Middleware())
+
+	if cfg.RateLimit.Enabled {
+		rateLimitManager, err := ratelimit.NewManager(&ratelimit.ManagerConfig{
+			Config: &ratelimit.Config{
+				Enabled:           cfg.RateLimit.Enabled,
+				Strategy:          ratelimit.Strategy(cfg.RateLimit.Strategy),
+				RequestsPerSecond: cfg.RateLimit.RequestsPerSecond,
+				Burst:             cfg.RateLimit.Burst,
+				UseRedis:          cfg.RateLimit.UseRedis,
+				RedisKeyTTL:       cfg.RateLimit.RedisKeyTTL,
+				PerEndpoint:       cfg.RateLimit.PerEndpoint,
+				Whitelist:         cfg.RateLimit.Whitelist,
+				TrustedProxies:    cfg.RateLimit.TrustedProxies,
+			},
+			RedisClient: rdb,
+			Logger:      logger,
+		})
+		if err != nil {
+			logger.Fatal("failed to initialize rate limiter", zap.Error(err))
+		}
+
+		rateLimitManager.SetOnLimitReached(func(c echo.Context, key string) {
+			logger.Warn("rate limit exceeded",
+				zap.String("ip", c.RealIP()),
+				zap.String("path", c.Path()),
+				zap.String("key", key),
+			)
+		})
+
+		e.Use(rateLimitManager.Middleware())
+
+		defer func() {
+			if err := rateLimitManager.Close(); err != nil {
+				logger.Error("error closing rate limiter", zap.Error(err))
+			}
+		}()
+
+		logger.Info("rate limiting enabled",
+			zap.String("strategy", string(rateLimitManager.Config().Strategy)),
+			zap.Int("requests_per_second", rateLimitManager.Config().RequestsPerSecond),
+		)
+	}
 
 	// Unprotected routes
 	apiGroup := e.Group("/api")
@@ -138,7 +218,7 @@ func main() {
 	v1Group.GET("/authors/:author_id/crosshairs", crosshairHandler.GetByAuthorID)
 
 	// Logout route
-	authGroup.GET("/logout", authHandler.LogoutHandler)
+	v1Group.POST("/auth/logout", authHandler.LogoutHandler)
 
 	// Protected routes
 	protectedGroup := v1Group.Group("")
@@ -151,12 +231,9 @@ func main() {
 	protectedGroup.DELETE("/crosshairs/:id/like", crosshairHandler.Unlike)
 	protectedGroup.DELETE("/crosshairs/:id", crosshairHandler.Delete)
 
-	e.GET("/health", func(c echo.Context) error {
-		return c.JSON(200, map[string]string{
-			"status":  "ok",
-			"version": viper.GetString("app.version"),
-		})
-	})
+	e.GET("/health", healthHandler.HealthCheck)
+	e.GET("/health/detailed", healthHandler.HealthCheckDetailed)
+	e.GET("/metrics/db", healthHandler.MetricsHandler)
 
 	go func() {
 		port := viper.GetString("server.port")
@@ -197,6 +274,8 @@ func connectRedis(cfg config.RedisConfig, logger *zap.Logger) *redis.Client {
 	return rdb
 }
 
+// connectDB is deprecated - use database.NewPoolManager instead
+// Kept for backwards compatibility
 func connectDB(cfg config.DatabaseConfig) (*gorm.DB, error) {
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=%s",
 		cfg.Host, cfg.User, cfg.Password, cfg.Name, cfg.Port, cfg.SSLMode)
@@ -228,4 +307,63 @@ func runMigrations(db *sql.DB, logger *zap.Logger) error {
 
 	logger.Info("database migrations applied successfully")
 	return nil
+}
+
+func buildSecurityConfig(cfg *config.Config, logger *zap.Logger) *security.ManagerConfig {
+	// Convert SameSite string to http.SameSite
+	var sameSite http.SameSite
+	switch cfg.Security.CSRFCookieSameSite {
+	case "strict":
+		sameSite = http.SameSiteStrictMode
+	case "lax":
+		sameSite = http.SameSiteLaxMode
+	case "none":
+		sameSite = http.SameSiteNoneMode
+	default:
+		sameSite = http.SameSiteStrictMode
+	}
+
+	return &security.ManagerConfig{
+		Headers: &security.HeadersConfig{
+			HSTSMaxAge:            cfg.Security.HSTSMaxAge,
+			HSTSIncludeSubdomains: cfg.Security.HSTSIncludeSubdomains,
+			HSTSPreload:           cfg.Security.HSTSPreload,
+			XSSProtection:         cfg.Security.XSSProtection,
+			XFrameOptions:         cfg.Security.XFrameOptions,
+			ContentTypeNoSniff:    cfg.Security.ContentTypeNoSniff,
+			ReferrerPolicy:        cfg.Security.ReferrerPolicy,
+			PermissionsPolicy:     cfg.Security.PermissionsPolicy,
+			XContentTypeOptions:   "nosniff",
+			XDNSPrefetchControl:   "off",
+			XDownloadOptions:      "noopen",
+			XPermittedCrossDomain: "none",
+			RemoveHeaders:         []string{"Server", "X-Powered-By"},
+			Logger:                logger,
+		},
+		CSP: &security.CSPConfig{
+			Enabled:    cfg.Security.CSPEnabled,
+			ReportOnly: cfg.Security.CSPReportOnly,
+			Directives: security.DefaultCSPDirectives(),
+			Logger:     logger,
+		},
+		CORS: &security.CORSConfig{
+			Enabled:          true,
+			AllowOrigins:     []string{cfg.App.ClientURL},
+			AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+			AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "X-CSRF-Token", "X-Request-ID"},
+			ExposeHeaders:    []string{"X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"},
+			AllowCredentials: true,
+			MaxAge:           86400,
+			Logger:           logger,
+		},
+		CSRF: &security.CSRFConfig{
+			Enabled:        cfg.Security.CSRFEnabled,
+			CookieSecure:   cfg.Security.CSRFCookieSecure,
+			CookieSameSite: sameSite,
+			TokenLookup:    "header:X-CSRF-Token",
+			SkipPaths:      []string{"/health", "/metrics"},
+			Logger:         logger,
+		},
+		Logger: logger,
+	}
 }

@@ -10,15 +10,18 @@ import {
 } from '@/shared/ui/pagination'
 import { UserCard } from '@/shared/ui/UserCard'
 import { User } from '@/entities/user'
+import { PlayerSearchResult } from '@/shared/lib/validation'
+
+type UserCardData = PlayerSearchResult | User
 
 interface PaginatedResultsProps {
-  results: User[]
+  results: UserCardData[]
   totalCount: number
   page: number
   pageSize: number
   totalPages: number
   onPageChange: (page: number) => void
-  onUserClick?: (user: User) => void
+  onUserClick?: (user: UserCardData) => void
   showExtendedInfo?: boolean
   loading?: boolean
 }
@@ -165,14 +168,17 @@ export const PaginatedResults: React.FC<PaginatedResultsProps> = ({
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {results.map((user) => (
-          <UserCard
-            key={user.steam_id}
-            user={user}
-            onClick={() => onUserClick?.(user)}
-            showExtendedInfo={showExtendedInfo}
-          />
-        ))}
+        {results.map((user) => {
+          const key = 'steamId' in user ? user.steamId : user.steam_id
+          return (
+            <UserCard
+              key={key}
+              user={user}
+              onClick={() => onUserClick?.(user)}
+              showExtendedInfo={showExtendedInfo}
+            />
+          )
+        })}
       </div>
 
       {totalPages > 1 && (

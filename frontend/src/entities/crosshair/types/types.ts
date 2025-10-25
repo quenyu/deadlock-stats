@@ -1,41 +1,40 @@
-export interface CrosshairSettings {
-  color: string
-  thickness: number
-  length: number
-  gap: number
-  dot: boolean
-  opacity: number
-  pipOpacity: number
-  dotOutlineOpacity: number
-  hitMarkerDuration: number
-  pipBorder: boolean
-  pipGapStatic: boolean
-}
+import { User } from '../../user'
+import type { CrosshairSettings as CrosshairSettingsType } from '@/shared/lib/validation'
+
+// Re-export from validation schema for consistency
+export type CrosshairSettings = CrosshairSettingsType
 
 export interface CrosshairPreset {
   name: string
   settings: CrosshairSettings
 }
 
-export interface CrosshairListItem {
+// Matches backend: backend/internal/domain/crosshair.go Crosshair
+export interface Crosshair {
   id: string
+  author_id: string
+  author?: User
   title: string
   description: string
-  settings: CrosshairSettings
+  settings: CrosshairSettings | string // Can be object or JSON string
   likes_count: number
-  created_at: string
-  author_id: string
-  author_name?: string
-  author_avatar?: string
-  is_liked: boolean
   is_public: boolean
   view_count: number
+  created_at: string
+  updated_at: string
 }
 
-export interface PublishedCrosshair {
+// Matches backend: backend/internal/domain/crosshair.go CrosshairLike
+export interface CrosshairLike {
   id: string
-  settings: CrosshairSettings
-  likes: number
-  author_id: string
-  createdAt: string
+  user_id: string
+  crosshair_id: string
+  created_at: string
+}
+
+// Extended type for UI with client-side fields
+export interface CrosshairListItem extends Crosshair {
+  is_liked: boolean // Client-side only
+  author_name?: string // Denormalized from author
+  author_avatar?: string // Denormalized from author
 } 

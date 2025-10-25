@@ -26,7 +26,7 @@ func (r *CrosshairRepository) Create(crosshair *domain.Crosshair) error {
 
 func (r *CrosshairRepository) GetByID(id uuid.UUID) (*domain.Crosshair, error) {
 	var crosshair domain.Crosshair
-	err := r.db.First(&crosshair, "id = ?", id).Error
+	err := r.db.Preload("Author").First(&crosshair, "id = ?", id).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, errors.New("crosshair not found")

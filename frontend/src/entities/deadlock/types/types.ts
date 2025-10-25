@@ -1,12 +1,14 @@
+// Matches backend: backend/internal/domain/deadlock_mmr.go DeadlockMMR
 export interface DeadlockMMR {
   match_id: number
+  rank: number
   start_time: number
   player_score: number
-  rank: number
   division: number
   division_tier: number
 }
 
+// Raw match data from API - extends Match from player types
 export interface MatchRaw {
   match_id: number
   hero_id: number
@@ -25,15 +27,17 @@ export interface MatchRaw {
   rank_image?: string
   player_rank_change: number
   player_score?: number
+  player_team?: number
 
   kills?: number
   deaths?: number
   assists?: number
   duration_minutes?: number
   match_time?: string
-  souls?: number
+  result?: string
 }
 
+// Raw hero stat data from API
 export interface HeroStatRaw {
   hero_id: number
   matches_played: number
@@ -89,17 +93,14 @@ export interface MateStat {
   win_rate: number;
 }
 
+// Matches backend: backend/internal/domain/deadlock_mmr.go HeroMMRHistory
 export interface HeroMMRHistory {
-  hero_id: number;
-  hero_name: string;
-  history: {
-    match_id: number;
-    start_time: number;
-    player_score: number;
-    rank: number;
-  }[];
+  hero_id: number
+  hero_name: string
+  history: DeadlockMMR[]
 }
 
+// Matches backend: backend/internal/dto/extended_player_profile.go ExtendedPlayerProfile
 export interface ExtendedPlayerProfileDTO {
   match_history: MatchRaw[]
   hero_stats: HeroStatRaw[]
@@ -117,15 +118,16 @@ export interface ExtendedPlayerProfileDTO {
   rank_name: string
   sub_rank: number
   
-  featured_heroes?: FeaturedHero[]
-  peak_rank?: number
-  peak_rank_name?: string
-  peak_rank_image?: string
-  personal_records?: PersonalRecords
-  avg_kills_per_match?: number
-  avg_deaths_per_match?: number
-  avg_assists_per_match?: number
-  avg_match_duration?: number
-  mate_stats?: MateStat[]
-  hero_mmr_history?: HeroMMRHistory[];
+  featured_heroes: FeaturedHero[]
+  peak_rank: number
+  peak_rank_name: string
+  peak_rank_image: string
+  personal_records: PersonalRecords
+  avg_kills_per_match: number
+  avg_deaths_per_match: number
+  avg_assists_per_match: number
+  avg_match_duration: number
+  mate_stats: MateStat[]
+  hero_mmr_history: HeroMMRHistory[]
+  last_updated_at: string
 } 

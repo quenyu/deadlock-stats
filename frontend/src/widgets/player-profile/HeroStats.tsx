@@ -27,8 +27,8 @@ export const HeroStats = ({ heroStats }: HeroStatsProps) => {
     )
   }
 
-  const sortedHeroes = [...heroStats].sort((a, b) => b.matches - a.matches).slice(0, 5)
-  const maxMatches = Math.max(...sortedHeroes.map(h => h.matches))
+  const sortedHeroes = [...heroStats].sort((a, b) => b.matches_played - a.matches_played).slice(0, 5)
+  const maxMatches = Math.max(...sortedHeroes.map(h => h.matches_played))
 
   return (
     <Card>
@@ -51,12 +51,12 @@ export const HeroStats = ({ heroStats }: HeroStatsProps) => {
               <div className="flex-1">
                 <p className="font-semibold">{hero.hero_name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {safeToFixed(hero.win_rate, 0)}% Win Rate ({hero.matches} Matches)
+                  {safeToFixed(hero.win_rate, 0)}% Win Rate ({hero.matches_played} Matches)
                 </p>
               </div>
               <p className="font-semibold">{safeToFixed(hero.kda, 2)} KDA</p>
             </div>
-            <Progress value={(hero.matches / maxMatches) * 100} className="h-2" />
+            <Progress value={(hero.matches_played / maxMatches) * 100} className="h-2" />
           </div>
         ))}
       </CardContent>

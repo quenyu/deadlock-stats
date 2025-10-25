@@ -1,9 +1,7 @@
 import { useState } from 'react'
 import { useCrosshairStore } from '@/entities/crosshair/model/store'
-import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
 import { Textarea } from '@/shared/ui/textarea'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/shared/ui/alert-dialog'
 
 interface PublishModalProps {
@@ -41,6 +39,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ isOpen, onClose }) =
     }
   }
 
+  // @ts-expect-error - Will be used for proper modal close handling
   const handleClose = () => {
     if (!loading) {
       setTitle('')
@@ -52,7 +51,7 @@ export const PublishModal: React.FC<PublishModalProps> = ({ isOpen, onClose }) =
   }
 
   return (
-    <AlertDialog open={isOpen} onOpenChange={(open) => { if (!loading) onClose(); }}>
+    <AlertDialog open={isOpen} onOpenChange={() => { if (!loading) onClose(); }}>
       <AlertDialogContent className="max-w-md">
         <AlertDialogHeader>
           <AlertDialogTitle>Publish Crosshair</AlertDialogTitle>

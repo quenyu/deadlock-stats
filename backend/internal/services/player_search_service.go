@@ -13,12 +13,12 @@ import (
 
 	"sync"
 
-	"github.com/go-redis/redis/v8"
 	"github.com/google/uuid"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"github.com/quenyu/deadlock-stats/internal/domain"
 	"github.com/quenyu/deadlock-stats/internal/dto"
 	"github.com/quenyu/deadlock-stats/internal/repositories"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -193,21 +193,27 @@ func (s *PlayerSearchService) SearchPlayersWithFilters(ctx context.Context, quer
 		}
 	}
 
-	if !s.isValidSteamID(query) && !strings.Contains(query, " ") {
-		steamID, err := resolveVanityURL(query, s.steamAPIKey)
-		if err == nil && steamID != "" {
-			query = steamID
+	var results []dto.UserSearchResult
+	var err error
+
+	switch filters.GetSearchType() {
+	case "steamid":
+		results, err = s.searchBySteamID(ctx, query)
+	case "nickname":
+		results, err = s.searchByNickname(ctx, query)
+	default:
+		localResults, apiResults, err := s.fetchSearchResults(ctx, query)
+		if err != nil {
+			return nil, err
 		}
+		results = s.combineSearchResults(localResults, apiResults)
 	}
 
-	localResults, apiResults, err := s.fetchSearchResults(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 
-	results := s.combineSearchResults(localResults, apiResults)
 	s.sortUsersByFilters(results, filters)
-
 	return s.applyPagination(results, page, pageSize), nil
 }
 
@@ -271,26 +277,47 @@ func (s *PlayerSearchService) IsValidUser(user dto.UserSearchResult) bool {
 	return user.SteamID != "" && user.Nickname != "" && user.AvatarURL != ""
 }
 
-func (s *PlayerSearchService) searchBySteamID(ctx context.Context, query string) ([]dto.UserSearchResult, error) {
+func (s *PlayerSearchService) searchBySteamID(_ context.Context, query string) ([]dto.UserSearchResult, error) {
 	if !s.isValidSteamID(query) {
 		return []dto.UserSearchResult{}, nil
 	}
 
-	user, err := s.authService.SearchPlayersBySteamID(query)
-	if err != nil {
-		s.logger.Error("Error finding user by SteamID", zap.Error(err), zap.String("steamID", query))
-		return []dto.UserSearchResult{}, err
+	localUser, err := s.userRepository.FindBySteamID(query)
+	if err == nil && localUser != nil {
+		if localUser.SteamID != "" && localUser.Nickname != "" && localUser.AvatarURL != "" {
+			return []dto.UserSearchResult{{
+				ID:         localUser.ID.String(),
+				SteamID:    localUser.SteamID,
+				Nickname:   localUser.Nickname,
+				AvatarURL:  localUser.AvatarURL,
+				ProfileURL: localUser.ProfileURL,
+				CreatedAt:  &localUser.CreatedAt,
+				UpdatedAt:  &localUser.UpdatedAt,
+			}}, nil
+		}
+		s.logger.Debug("Found user in DB but data is invalid, refreshing from Steam API",
+			zap.String("steamID", query))
 	}
 
-	if user != nil {
+	steamUser, err := s.authService.GetPlayerSummaries(query)
+	if err != nil {
+		s.logger.Debug("Failed to get player from Steam API", zap.String("steamID", query), zap.Error(err))
+		return []dto.UserSearchResult{}, nil
+	}
+
+	if steamUser != nil && steamUser.SteamID != "" && steamUser.Nickname != "" && steamUser.AvatarURL != "" {
+		if err := s.userRepository.FindOrCreate(steamUser); err != nil {
+			s.logger.Warn("Failed to save user to database", zap.Error(err))
+		}
+
 		return []dto.UserSearchResult{{
-			ID:         user.ID.String(),
-			SteamID:    user.SteamID,
-			Nickname:   user.Nickname,
-			AvatarURL:  user.AvatarURL,
-			ProfileURL: user.ProfileURL,
-			CreatedAt:  &user.CreatedAt,
-			UpdatedAt:  &user.UpdatedAt,
+			ID:         steamUser.ID.String(),
+			SteamID:    steamUser.SteamID,
+			Nickname:   steamUser.Nickname,
+			AvatarURL:  steamUser.AvatarURL,
+			ProfileURL: steamUser.ProfileURL,
+			CreatedAt:  &steamUser.CreatedAt,
+			UpdatedAt:  &steamUser.UpdatedAt,
 		}}, nil
 	}
 
@@ -298,28 +325,15 @@ func (s *PlayerSearchService) searchBySteamID(ctx context.Context, query string)
 }
 
 func (s *PlayerSearchService) searchByNickname(ctx context.Context, query string) ([]dto.UserSearchResult, error) {
-	localResults, err := s.playerProfileRepository.SearchByNickname(ctx, query)
+	localResults, apiResults, err := s.fetchSearchResults(ctx, query)
 	if err != nil {
 		s.logger.Error("Error searching by nickname", zap.Error(err))
 		return []dto.UserSearchResult{}, err
 	}
 
-	validResults := make([]dto.UserSearchResult, 0, len(localResults))
-	for _, user := range localResults {
-		if user.SteamID != "" && user.Nickname != "" && user.AvatarURL != "" {
-			validResults = append(validResults, dto.UserSearchResult{
-				ID:         user.ID.String(),
-				SteamID:    user.SteamID,
-				Nickname:   user.Nickname,
-				AvatarURL:  user.AvatarURL,
-				ProfileURL: user.ProfileURL,
-				CreatedAt:  &user.CreatedAt,
-				UpdatedAt:  &user.UpdatedAt,
-			})
-		}
-	}
+	combined := s.combineSearchResults(localResults, apiResults)
 
-	return validResults, nil
+	return combined, nil
 }
 
 func (s *PlayerSearchService) fetchSearchResults(ctx context.Context, query string) ([]domain.User, []domain.SteamProfileSearch, error) {
@@ -542,11 +556,29 @@ func (s *PlayerSearchService) sortUsersByFilters(users []dto.UserSearchResult, f
 	sort.Slice(users, func(i, j int) bool {
 		switch filters.GetDefaultSortBy() {
 		case "created_at":
+			if users[i].CreatedAt == nil && users[j].CreatedAt == nil {
+				return false
+			}
+			if users[i].CreatedAt == nil {
+				return filters.GetDefaultSortOrder() == "asc"
+			}
+			if users[j].CreatedAt == nil {
+				return filters.GetDefaultSortOrder() == "desc"
+			}
 			if filters.GetDefaultSortOrder() == "desc" {
 				return users[i].CreatedAt.After(*users[j].CreatedAt)
 			}
 			return users[i].CreatedAt.Before(*users[j].CreatedAt)
 		case "updated_at":
+			if users[i].UpdatedAt == nil && users[j].UpdatedAt == nil {
+				return false
+			}
+			if users[i].UpdatedAt == nil {
+				return filters.GetDefaultSortOrder() == "asc"
+			}
+			if users[j].UpdatedAt == nil {
+				return filters.GetDefaultSortOrder() == "desc"
+			}
 			if filters.GetDefaultSortOrder() == "desc" {
 				return users[i].UpdatedAt.After(*users[j].UpdatedAt)
 			}

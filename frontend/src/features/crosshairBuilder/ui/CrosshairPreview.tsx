@@ -16,8 +16,11 @@ export const CrosshairPreview: React.FC<CrosshairPreviewProps> = ({
   opacity,
   pipOpacity,
   dotOutlineOpacity,
+  // @ts-expect-error - Props kept for future interactive features
   isInteractive,
+  // @ts-expect-error - Props kept for future interactive features
   svgRef,
+  // @ts-expect-error - Props kept for future interactive features
   interactiveSvgRef,
 }) => (
   <>

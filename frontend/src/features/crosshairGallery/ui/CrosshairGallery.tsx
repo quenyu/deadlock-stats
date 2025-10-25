@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useCrosshairStore } from '@/entities/crosshair/model/store'
 import { LikeButton } from '@/features/crosshairBuilder/ui/LikeButton'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
@@ -6,17 +7,27 @@ import { Badge } from '@/shared/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
 import { EyeIcon, CalendarIcon } from 'lucide-react'
 import { CrosshairPreview } from '@/features/crosshairBuilder/ui/CrosshairPreview'
+import { createLogger } from '@/shared/lib/logger'
+import { routes } from '@/shared/constants/routes'
+
+const log = createLogger('CrosshairGallery')
 
 export const CrosshairGallery = () => {
   const published = useCrosshairStore(s => s.published)
   const loading = useCrosshairStore(s => s.loading)
   const loadPublished = useCrosshairStore(s => s.loadPublished)
+  const navigate = useNavigate()
 
   useEffect(() => {
     loadPublished()
   }, [loadPublished])
 
-  console.log("CROSSHAIR GALLERY", published)
+  const handleCrosshairClick = (crosshairId: string) => {
+    navigate(routes.crosshairs.view(crosshairId))
+  }
+
+  log.debug('Gallery state', { publishedCount: published.length, loading })
+  
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -37,7 +48,6 @@ export const CrosshairGallery = () => {
       </div>
     )
   }
-  console.log("PUBLISHED LENGTH", published.length)
 
   if (published.length === 0) {
     return (
@@ -52,14 +62,16 @@ export const CrosshairGallery = () => {
     )
   }
 
-
-
-  console.log("RETURNING CROSSHAIR GALLERY")
+  log.info('Rendering crosshair gallery', { count: published.length })
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {published.map((crosshair) => (
-        <Card key={crosshair.id} className="hover:shadow-lg transition-shadow">
+        <Card 
+          key={crosshair.id} 
+          className="hover:shadow-lg transition-shadow cursor-pointer"
+          onClick={() => handleCrosshairClick(crosshair.id)}
+        >
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="flex-1">
@@ -86,7 +98,10 @@ export const CrosshairGallery = () => {
             <div className="relative bg-gray-900 rounded-lg p-4 mb-4">
               <div className="w-full h-32 flex items-center justify-center">
                 <svg width="80" height="80" viewBox="0 0 120 120" className="drop-shadow-lg">
-                  <CrosshairPreview {...crosshair.settings} isInteractive={false} />
+                  <CrosshairPreview 
+                    {...(typeof crosshair.settings === 'string' ? JSON.parse(crosshair.settings) : crosshair.settings)} 
+                    isInteractive={false} 
+                  />
                 </svg>
               </div>
             </div>
@@ -108,11 +123,13 @@ export const CrosshairGallery = () => {
           </CardContent>
 
           <CardFooter>
-            <LikeButton
-              crosshairId={crosshair.id}
-              liked={crosshair.is_liked}
-              likesCount={crosshair.likes_count}
-            />
+            <div onClick={(e) => e.stopPropagation()}>
+              <LikeButton
+                crosshairId={crosshair.id}
+                liked={crosshair.is_liked}
+                likesCount={crosshair.likes_count}
+              />
+            </div>
           </CardFooter>
         </Card>
       ))}

@@ -16,7 +16,7 @@ type MemoryLimiter struct {
 	stopChan chan struct{}
 }
 
-type limiterEntry struct {
+type MemoryLimiterEntry struct {
 	limiter  *rate.Limiter
 	lastSeen time.Time
 }
@@ -61,12 +61,12 @@ func (ml *MemoryLimiter) getLimiter(key string, limit int) *rate.Limiter {
 		limiter := rate.NewLimiter(rate.Limit(limit), ml.burst)
 		ml.limiters[key] = &limiterEntry{
 			limiter:  limiter,
-			lastSeen: time.Now(),
+			lastUsed: time.Now(),
 		}
 		return limiter
 	}
 
-	entry.lastSeen = time.Now()
+	entry.lastUsed = time.Now()
 
 	entry.limiter.SetLimit(rate.Limit(limit))
 
@@ -95,7 +95,7 @@ func (ml *MemoryLimiter) removeExpired() {
 
 	now := time.Now()
 	for key, entry := range ml.limiters {
-		if now.Sub(entry.lastSeen) > ml.ttl {
+		if now.Sub(entry.lastUsed) > ml.ttl {
 			delete(ml.limiters, key)
 		}
 	}

@@ -277,26 +277,47 @@ func (s *PlayerSearchService) IsValidUser(user dto.UserSearchResult) bool {
 	return user.SteamID != "" && user.Nickname != "" && user.AvatarURL != ""
 }
 
-func (s *PlayerSearchService) searchBySteamID(ctx context.Context, query string) ([]dto.UserSearchResult, error) {
+func (s *PlayerSearchService) searchBySteamID(_ context.Context, query string) ([]dto.UserSearchResult, error) {
 	if !s.isValidSteamID(query) {
 		return []dto.UserSearchResult{}, nil
 	}
 
-	user, err := s.authService.SearchPlayersBySteamID(query)
-	if err != nil {
-		s.logger.Error("Error finding user by SteamID", zap.Error(err), zap.String("steamID", query))
-		return []dto.UserSearchResult{}, err
+	localUser, err := s.userRepository.FindBySteamID(query)
+	if err == nil && localUser != nil {
+		if localUser.SteamID != "" && localUser.Nickname != "" && localUser.AvatarURL != "" {
+			return []dto.UserSearchResult{{
+				ID:         localUser.ID.String(),
+				SteamID:    localUser.SteamID,
+				Nickname:   localUser.Nickname,
+				AvatarURL:  localUser.AvatarURL,
+				ProfileURL: localUser.ProfileURL,
+				CreatedAt:  &localUser.CreatedAt,
+				UpdatedAt:  &localUser.UpdatedAt,
+			}}, nil
+		}
+		s.logger.Debug("Found user in DB but data is invalid, refreshing from Steam API",
+			zap.String("steamID", query))
 	}
 
-	if user != nil {
+	steamUser, err := s.authService.GetPlayerSummaries(query)
+	if err != nil {
+		s.logger.Debug("Failed to get player from Steam API", zap.String("steamID", query), zap.Error(err))
+		return []dto.UserSearchResult{}, nil
+	}
+
+	if steamUser != nil && steamUser.SteamID != "" && steamUser.Nickname != "" && steamUser.AvatarURL != "" {
+		if err := s.userRepository.FindOrCreate(steamUser); err != nil {
+			s.logger.Warn("Failed to save user to database", zap.Error(err))
+		}
+
 		return []dto.UserSearchResult{{
-			ID:         user.ID.String(),
-			SteamID:    user.SteamID,
-			Nickname:   user.Nickname,
-			AvatarURL:  user.AvatarURL,
-			ProfileURL: user.ProfileURL,
-			CreatedAt:  &user.CreatedAt,
-			UpdatedAt:  &user.UpdatedAt,
+			ID:         steamUser.ID.String(),
+			SteamID:    steamUser.SteamID,
+			Nickname:   steamUser.Nickname,
+			AvatarURL:  steamUser.AvatarURL,
+			ProfileURL: steamUser.ProfileURL,
+			CreatedAt:  &steamUser.CreatedAt,
+			UpdatedAt:  &steamUser.UpdatedAt,
 		}}, nil
 	}
 
@@ -304,28 +325,15 @@ func (s *PlayerSearchService) searchBySteamID(ctx context.Context, query string)
 }
 
 func (s *PlayerSearchService) searchByNickname(ctx context.Context, query string) ([]dto.UserSearchResult, error) {
-	localResults, err := s.playerProfileRepository.SearchByNickname(ctx, query)
+	localResults, apiResults, err := s.fetchSearchResults(ctx, query)
 	if err != nil {
 		s.logger.Error("Error searching by nickname", zap.Error(err))
 		return []dto.UserSearchResult{}, err
 	}
 
-	validResults := make([]dto.UserSearchResult, 0, len(localResults))
-	for _, user := range localResults {
-		if user.SteamID != "" && user.Nickname != "" && user.AvatarURL != "" {
-			validResults = append(validResults, dto.UserSearchResult{
-				ID:         user.ID.String(),
-				SteamID:    user.SteamID,
-				Nickname:   user.Nickname,
-				AvatarURL:  user.AvatarURL,
-				ProfileURL: user.ProfileURL,
-				CreatedAt:  &user.CreatedAt,
-				UpdatedAt:  &user.UpdatedAt,
-			})
-		}
-	}
+	combined := s.combineSearchResults(localResults, apiResults)
 
-	return validResults, nil
+	return combined, nil
 }
 
 func (s *PlayerSearchService) fetchSearchResults(ctx context.Context, query string) ([]domain.User, []domain.SteamProfileSearch, error) {

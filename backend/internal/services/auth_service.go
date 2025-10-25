@@ -285,7 +285,7 @@ func (s *AuthService) parsePlayerSummariesResponse(body []byte, steamID string) 
 	)
 
 	playerData := players[0]
-	return s.createUserFromSteamData(playerData), nil
+	return s.createUserFromSteamData(steamID, playerData), nil
 }
 
 func (s *AuthService) parseVanityURLResponse(body []byte) (string, error) {
@@ -302,12 +302,13 @@ func (s *AuthService) parseVanityURLResponse(body []byte) (string, error) {
 	return resp.Response.SteamID, nil
 }
 
-func (s *AuthService) createUserFromSteamData(playerData struct {
+func (s *AuthService) createUserFromSteamData(steamID string, playerData struct {
 	Nickname   string `json:"personaname"`
 	AvatarURL  string `json:"avatarfull"`
 	ProfileURL string `json:"profileurl"`
 }) *domain.User {
 	return &domain.User{
+		SteamID:    steamID,
 		Nickname:   playerData.Nickname,
 		AvatarURL:  playerData.AvatarURL,
 		ProfileURL: playerData.ProfileURL,

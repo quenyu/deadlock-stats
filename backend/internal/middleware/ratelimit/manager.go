@@ -12,7 +12,7 @@ import (
 type Manager struct {
 	config     *Config
 	middleware *Middleware
-	limiter    Limiter
+	limiter    ILimiter
 	logger     *zap.Logger
 }
 
@@ -37,7 +37,7 @@ func NewManager(cfg *ManagerConfig) (*Manager, error) {
 	}
 
 	// Create limiter based on configuration
-	var limiter Limiter
+	var limiter ILimiter
 	if cfg.Config.UseRedis && cfg.RedisClient != nil {
 		ttl := cfg.Config.RedisKeyTTL
 		if ttl == 0 {
@@ -86,7 +86,7 @@ func (m *Manager) SetOnLimitReached(callback LimitReachedCallback) {
 }
 
 // Limiter returns the underlying limiter
-func (m *Manager) Limiter() Limiter {
+func (m *Manager) Limiter() ILimiter {
 	return m.limiter
 }
 

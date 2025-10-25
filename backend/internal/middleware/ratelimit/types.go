@@ -10,8 +10,8 @@ type KeyExtractor func(c echo.Context) string
 // LimitReachedCallback is called when rate limit is exceeded
 type LimitReachedCallback func(c echo.Context, key string)
 
-// Limiter interface defines rate limiting operations
-type Limiter interface {
+// ILimiter interface defines rate limiting operations
+type ILimiter interface {
 	// Allow checks if request is allowed
 	Allow(key string, limit int) (allowed bool, remaining int, resetAt int64, err error)
 

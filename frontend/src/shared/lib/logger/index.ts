@@ -1,54 +1,37 @@
-/**
- * Logger - Modular logging system
- * 
- * @example
- * ```ts
- * import { logger, createLogger } from '@/shared/lib/logger'
- * 
- * // Global logger
- * logger.info('Application started')
- * 
- * // Scoped logger
- * const log = createLogger('MyComponent')
- * log.debug('Component mounted')
- * log.error('Failed to load data', { error })
- * ```
- */
+const isDev = import.meta.env.DEV
 
-import { Logger } from './logger'
-
-export type { LoggerConfig, LogLevel, LogContext, LogEntry } from './config'
-export type { ScopedLogger } from './types'
-
-export { Logger } from './logger'
-export { LogFormatter } from './formatter'
-export { ConsoleTransport } from './transport'
-export { SessionManager } from './session'
-
-export { 
-  defaultConfig, 
-  developmentConfig, 
-  productionConfig,
-  shouldLog,
-  LOG_LEVELS,
-} from './config'
-
-export const logger = new Logger()
-
-/**
- * Create scoped logger
- * 
- * @param scopeName - Scope name (e.g., component name)
- * @param context - Additional context to include in all logs
- * @returns Scoped logger instance
- * 
- * @example
- * ```ts
- * const log = createLogger('UserProfile', { userId: '123' })
- * log.info('Profile loaded') // [UserProfile] Profile loaded { userId: '123' }
- * ```
- */
-export const createLogger = (scopeName: string, context?: Record<string, unknown>) => {
-  return logger.createScope(scopeName, context)
+export const logger = {
+    //eslint-
+  log: (...args: any[]) => {
+    if (isDev) {
+      console.log('[LOG]', ...args)
+    }
+  },
+  
+  error: (...args: any[]) => {
+    if (isDev) {
+      console.error('[ERROR]', ...args)
+    }
+    // В production можно отправлять в Sentry или другую систему мониторинга
+  },
+  
+  warn: (...args: any[]) => {
+    if (isDev) {
+      console.warn('[WARN]', ...args)
+    }
+  },
+  
+  info: (...args: any[]) => {
+    if (isDev) {
+      console.info('[INFO]', ...args)
+    }
+  },
+  
+  debug: (...args: any[]) => {
+    if (isDev) {
+      console.debug('[DEBUG]', ...args)
+    }
+  }
 }
 
+export default logger

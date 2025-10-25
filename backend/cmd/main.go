@@ -33,7 +33,11 @@ import (
 
 func main() {
 	logger, _ := zap.NewDevelopment()
-	defer logger.Sync()
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			logger.Sugar().Fatal(err)
+		}
+	}()
 
 	cfg, err := config.LoadConfig("./internal/config/config.yaml")
 	if err != nil {
@@ -92,9 +96,14 @@ func main() {
 	}
 
 	staticDataService := services.NewStaticDataService(logger)
-	if err := staticDataService.LoadStaticData(); err != nil {
-		logger.Fatal("failed to load static data", zap.Error(err))
-	}
+
+	go func() {
+		if err := staticDataService.LoadStaticData(); err != nil {
+			logger.Error("failed to load static data", zap.Error(err))
+		} else {
+			logger.Info("static data loaded successfully")
+		}
+	}()
 
 	userRepository := repositories.NewUserRepository(db)
 	playerProfileRepository := repositories.NewPlayerProfilePostgresRepository(db)

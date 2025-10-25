@@ -7,7 +7,6 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/quenyu/deadlock-stats/internal/dto"
-	cErrors "github.com/quenyu/deadlock-stats/internal/errors"
 	"github.com/quenyu/deadlock-stats/internal/services"
 	"github.com/quenyu/deadlock-stats/internal/validators"
 	"go.uber.org/zap"
@@ -45,10 +44,6 @@ func (h *PlayerSearchHandler) SearchPlayers(c echo.Context) error {
 		return ErrorHandler(err, c)
 	}
 
-	if result.TotalCount == 0 {
-		return ErrorHandler(cErrors.ErrNoSearchResults, c)
-	}
-
 	response := echo.Map{
 		"results":     result.Results,
 		"total_count": result.TotalCount,
@@ -78,10 +73,6 @@ func (h *PlayerSearchHandler) SearchPlayersAutocomplete(c echo.Context) error {
 
 	if err != nil {
 		return ErrorHandler(err, c)
-	}
-
-	if len(users) == 0 {
-		return ErrorHandler(cErrors.ErrNoSearchResults, c)
 	}
 
 	response := echo.Map{
@@ -116,10 +107,6 @@ func (h *PlayerSearchHandler) SearchPlayersWithFilters(c echo.Context) error {
 
 	if err != nil {
 		return ErrorHandler(err, c)
-	}
-
-	if result.TotalCount == 0 {
-		return ErrorHandler(cErrors.ErrNoSearchResults, c)
 	}
 
 	response := echo.Map{

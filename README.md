@@ -9,16 +9,6 @@
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
-- [Tech Stack](#-tech-stack)
-- [Quick Start](#-quick-start)
-- [Documentation](#-documentation)
-- [Project Structure](#-project-structure)
-- [Development](#-development)
-- [Contributing](#-contributing)
-- [Roadmap](#-roadmap)
-- [License](#-license)
-
 ## ✨ Features
 
 ### 🎯 Current Features
@@ -322,7 +312,7 @@ _See [ROADMAP.md](ROADMAP.md) for complete timeline_
 
 ## 📊 Current Status
 
-**Version**: 0.1.0-alpha  
+**Version**: 0.1.0-alpha
 **Status**: Active Development 🚧
 
 ### Metrics

@@ -1,380 +1,524 @@
-# ✅ Анализ проекта завершен!
+# Backend vs Frontend Models Analysis
 
-> **Дата**: 2025-10-07  
-> **Проект**: Deadlock Stats  
-> **Статус**: 📋 Полный TODO список и документация созданы
-
----
-
-## 📊 Что было сделано
-
-### 1. 📝 TODO List (30 задач)
-Создан приоритизированный список задач с:
-- ✅ Разделением по приоритетам (🔴 Critical → 🟡 High → 🟢 Medium → 🔵 Low)
-- ✅ Именованием веток по Conventional Commits
-- ✅ Детальными описаниями
-- ✅ Оценкой времени
-
-**Приоритеты**:
-- 🔴 **5 Critical** - Исправить немедленно (security, error handling)
-- 🟡 **6 High** - Важные улучшения (rate limiting, DB optimization, tests)
-- 🟢 **15 Medium** - Качество кода и фичи (refactoring, features)
-- 🔵 **4 Low** - Оптимизация (performance, nice-to-have)
-
-### 2. 📚 Полная документация
-Созданы следующие файлы:
-
-#### Основные документы
-- ✅ **README.md** - Главная страница проекта с features, tech stack, quick start
-- ✅ **PROJECT_OVERVIEW.md** - Детальный обзор проекта, архитектуры, статуса
-- ✅ **ROADMAP.md** - План развития на 9+ месяцев с фазами
-- ✅ **CONTRIBUTING.md** - Guide для контрибьюторов
-- ✅ **LICENSE** - MIT License
-
-#### Для разработчиков
-- ✅ **GETTING_STARTED.md** - Step-by-step guide для начала работы
-- ✅ **DEVELOPMENT_WORKFLOW.md** - Git workflow, conventions, команды
-- ✅ **TODO_SUMMARY.md** - Краткий обзор TODO с кодом и планом
-
-#### GitHub Templates
-- ✅ **.github/PULL_REQUEST_TEMPLATE.md** - Шаблон для PR
-- ✅ **.github/ISSUE_TEMPLATE/bug_report.md** - Шаблон для багов
-- ✅ **.github/ISSUE_TEMPLATE/feature_request.md** - Шаблон для фичей
-- ✅ **.github/ISSUE_TEMPLATE/config.yml** - Конфигурация issue templates
+## Overview
+This document provides a comprehensive comparison between backend domain models (Go) and frontend entity types (TypeScript).
 
 ---
 
-## 🎯 Ключевые находки проекта
+## ✅ Models Already Aligned
 
-### ✅ Что хорошо
-1. **Чистая архитектура** на backend (handlers → services → repositories)
-2. **Feature-Sliced Design** на frontend
-3. **Миграции БД** - управление схемой
-4. **Кэширование** - Redis с двухуровневым кэшом
-5. **Современный стек** - Go 1.23, React 19, TypeScript 5.8
-6. **Параллелизм** - использование goroutines
-7. **Хорошая структура** проекта
+### 1. **CrosshairSettings**
+- **Backend**: `backend/internal/domain/crosshair.go`
+- **Frontend**: `frontend/src/entities/crosshair/types/types.ts`
+- **Status**: ✅ Fully aligned
 
-### ❌ Критические проблемы
-1. **Нет proper error handling** (все ошибки → 500)
-2. **Potential goroutine deadlock** в fetchAllData
-3. **Нет валидации** входных данных
-4. **Нет rate limiting** (уязвимость к abuse)
-5. **Console.log в production** на фронтенде
-6. **Отсутствие индексов** в БД (медленные запросы)
-7. **Нет тестов** (coverage ~20-40%)
-8. **Нет CI/CD** pipeline
+### 2. **DeadlockMMR** 
+- **Backend**: `backend/internal/domain/deadlock_mmr.go`
+- **Frontend**: `frontend/src/entities/deadlock/types/types.ts`
+- **Status**: ✅ Fully aligned
 
-### 🚀 Рекомендации по приоритетам
+### 3. **PerformanceDynamics & Trend**
+- **Backend**: `backend/internal/domain/player_profile.go`
+- **Frontend**: `frontend/src/entities/player/types/types.ts` & `deadlock/types/types.ts`
+- **Status**: ✅ Fully aligned
 
-**Week 1-2: Critical Fixes** 🔴
-```
-1. fix/error-handling-backend     (4-6h)
-2. fix/goroutine-error-channel    (2-3h)
-3. fix/input-validation           (3-4h)
-4. fix/frontend-error-handling    (4-5h)
-5. fix/remove-console-logs        (1-2h)
+### 4. **PersonalRecords**
+- **Backend**: `backend/internal/domain/personal_records.go`
+- **Frontend**: `frontend/src/entities/deadlock/types/types.ts`
+- **Status**: ✅ Fully aligned
+
+### 5. **MateStat**
+- **Backend**: `backend/internal/domain/mate_stat.go`
+- **Frontend**: `frontend/src/entities/deadlock/types/types.ts`
+- **Status**: ✅ Fully aligned
+
+### 6. **FeaturedHero**
+- **Backend**: `backend/internal/domain/featured_hero.go`
+- **Frontend**: `frontend/src/entities/deadlock/types/types.ts`
+- **Status**: ✅ Fully aligned
+
+### 7. **HeroMMRHistory**
+- **Backend**: `backend/internal/domain/deadlock_mmr.go`
+- **Frontend**: `frontend/src/entities/deadlock/types/types.ts`
+- **Status**: ⚠️ Needs alignment - frontend uses nested object structure
+
+---
+
+## ⚠️ Models Needing Alignment
+
+### 1. **Crosshair**
+**Backend** (`backend/internal/domain/crosshair.go`):
+```go
+type Crosshair struct {
+    ID          uuid.UUID       `json:"id"`
+    AuthorID    uuid.UUID       `json:"author_id"`
+    Author      *User           `json:"author,omitempty"`
+    Title       string          `json:"title"`
+    Description string          `json:"description"`
+    Settings    json.RawMessage `json:"settings"`
+    LikesCount  int             `json:"likes_count"`
+    IsPublic    bool            `json:"is_public"`
+    ViewCount   int             `json:"view_count"`
+    CreatedAt   time.Time       `json:"created_at"`
+    UpdatedAt   time.Time       `json:"updated_at"`
+}
 ```
 
-**Week 3-4: High Priority** 🟡
-```
-6. fix/rate-limiting              (3-4h)
-7. fix/db-connection-pool         (1h)
-8. fix/add-db-indexes            (2h)
-9. chore/prometheus-metrics       (6h)
-10. test/backend-unit-tests       (12h+)
-```
+**Frontend** (`frontend/src/entities/crosshair/types/types.ts`):
+```typescript
+// Has two different interfaces:
+interface CrosshairListItem {
+  id: string
+  title: string
+  description: string
+  settings: CrosshairSettings
+  likes_count: number
+  created_at: string
+  author_id: string
+  author_name?: string
+  author_avatar?: string
+  is_liked: boolean  // ❌ Not in backend
+  is_public: boolean
+  view_count: number
+}
 
-**Week 5-6: Code Quality** 🟢
-```
-11. refactor/react-query-integration  (8h)
-12. refactor/skeleton-loaders         (3h)
-13. refactor/zod-validation           (4h)
-14. chore/ci-cd-pipeline              (8h)
-15. test/frontend-unit-tests          (8h)
-```
-
-**После этого** → готовы к новым features! 🎉
-
----
-
-## 📈 План на 9 месяцев
-
-### Phase 1: Stabilization (4-6 weeks) 🔴
-- Исправить все критические баги
-- Добавить security measures
-- Настроить мониторинг
-- Unit tests 60%+
-
-### Phase 2: Code Quality (4-6 weeks) 🟢
-- React Query migration
-- Performance optimization
-- Complete documentation
-- CI/CD pipeline
-
-### Phase 3: Hero Builds (6-8 weeks) 🎮
-- CRUD API для билдов
-- Vote & comment system
-- Build creator UI
-- AI recommendations
-
-### Phase 4: Crosshairs (4-6 weeks) 🎯
-- Visual editor
-- Gallery
-- Pro configs
-
-### Phase 5: Analytics (6-8 weeks) 📊
-- Global leaderboards
-- Meta analysis
-- Counter picks
-
-### Phase 6: Social (4-6 weeks) 👥
-- Friends system
-- Profile comparison
-- Teams/Clans
-
-### Phase 7: Premium (4-6 weeks) 💰
-- Subscription system
-- Advanced analytics
-- Monetization
-
-### Phase 8-9: Mobile & Advanced
-- PWA / React Native
-- AI features
-- Tournaments
-
----
-
-## 🎓 Что узнали из анализа
-
-### Архитектура
-- **Backend**: Чистая архитектура с правильным разделением слоев
-- **Frontend**: FSD паттерн (entities, features, widgets, pages, shared)
-- **Caching**: Двухуровневый кэш (full + partial) с fallback
-- **Database**: PostgreSQL с миграциями, но без индексов
-
-### Технологии
-- **Go**: Echo framework, GORM, Zap logger, Viper config
-- **React**: Zustand (→ migrate to React Query), Radix UI, Recharts
-- **Infra**: Docker Compose, Redis, планируется Prometheus
-
-### Проблемные места
-1. **Error handling** - основная проблема
-2. **Testing** - низкое покрытие
-3. **Security** - нет rate limiting, CSRF, валидации
-4. **Performance** - нет индексов, нет code splitting
-5. **Monitoring** - нет метрик, нет error tracking
-
----
-
-## 🚀 Следующие шаги
-
-### Для начала работы:
-
-1. **Прочитайте документацию**
-   ```bash
-   cat README.md
-   cat GETTING_STARTED.md
-   cat TODO_SUMMARY.md
-   ```
-
-2. **Выберите первую задачу**
-   - Рекомендация: `fix/remove-console-logs` (самая простая, 1-2 часа)
-   - Или начните с: `fix/error-handling-backend` (критичная)
-
-3. **Создайте ветку**
-   ```bash
-   git checkout -b fix/remove-console-logs
-   ```
-
-4. **Следуйте TODO_SUMMARY.md**
-   - Там есть код примеры
-   - Есть файлы которые нужно изменить
-   - Есть оценка времени
-
-5. **Создайте PR**
-   - Используйте шаблон `.github/PULL_REQUEST_TEMPLATE.md`
-   - Свяжите с TODO задачей
-
-### Для долгосрочного планирования:
-
-1. **Следуйте ROADMAP.md**
-   - 9 фаз развития
-   - Детальный timeline
-   - Success metrics
-
-2. **Используйте TODO list**
-   - 30 задач с приоритетами
-   - Отмечайте выполненные
-   - Добавляйте новые при необходимости
-
-3. **Читайте DEVELOPMENT_WORKFLOW.md**
-   - Git conventions
-   - Commit format
-   - Code style
-   - Testing strategy
-
----
-
-## 📊 Статистика проекта
-
-**Backend**:
-- Lines of code: ~5000+
-- Files: 50+
-- Packages: 8
-- Migrations: 15
-- Test coverage: ~40%
-
-**Frontend**:
-- Lines of code: ~8000+
-- Files: 100+
-- Components: 50+
-- Pages: 5
-- Test coverage: ~20%
-
-**Database**:
-- Tables: 10
-- Migrations: 15
-- Indexes: 0 (нужно добавить!)
-
-**Documentation** (создано сегодня):
-- Files: 11
-- Total lines: ~3500+
-- Coverage: Complete! ✅
-
----
-
-## 🎯 Success Criteria
-
-### Short-term (1-2 месяца)
-- ✅ Все critical bugs исправлены
-- ✅ Rate limiting добавлен
-- ✅ Test coverage 60%+
-- ✅ CI/CD настроен
-- ✅ Security hardening complete
-- ✅ Performance optimized (DB indexes, code splitting)
-
-### Mid-term (3-6 месяцев)
-- ✅ Hero Builds система запущена
-- ✅ 1000+ builds created
-- ✅ 10,000+ registered users
-- ✅ 1,000+ daily active users
-
-### Long-term (6-12 месяцев)
-- ✅ Premium tier launched
-- ✅ 100+ premium subscribers
-- ✅ Mobile app (PWA)
-- ✅ 50,000+ total users
-- ✅ $1000+ MRR
-
----
-
-## 🛠️ Полезные команды
-
-### Быстрый старт
-```bash
-# Запустить всё
-docker-compose up
-
-# Или локально
-cd backend && go run cmd/main.go
-cd frontend && npm run dev
+interface PublishedCrosshair {  // ❌ Should be removed
+  id: string
+  settings: CrosshairSettings
+  likes: number
+  author_id: string
+  createdAt: string  // ❌ Wrong casing
+}
 ```
 
-### Разработка
-```bash
-# Backend тесты
-go test ./...
+**Issues**:
+- Frontend has `author_name` and `author_avatar` (should use nested `author` object)
+- Frontend has `is_liked` field (client-side only)
+- `PublishedCrosshair` interface is redundant
+- Missing `updated_at` field
+- Inconsistent date field naming
 
-# Frontend тесты
-npm test
+---
 
-# Линтинг
-golangci-lint run
-npm run lint
+### 2. **CrosshairLike**
+**Backend** (`backend/internal/domain/crosshair.go`):
+```go
+type CrosshairLike struct {
+    ID          uuid.UUID `json:"id"`
+    UserID      uuid.UUID `json:"user_id"`
+    CrosshairID uuid.UUID `json:"crosshair_id"`
+    CreatedAt   time.Time `json:"created_at"`
+}
 ```
 
-### Git workflow
-```bash
-# Новая ветка
-git checkout -b fix/error-handling-backend
+**Frontend**: ❌ **Missing entirely**
 
-# Коммит
-git commit -m "fix(handlers): add proper error handling"
+---
 
-# Push
-git push origin fix/error-handling-backend
+### 3. **Match**
+**Backend** (`backend/internal/domain/match.go`):
+```go
+type Match struct {
+    ID                   string    `json:"match_id"`  // ⚠️ "match_id" not "id"
+    HeroID               int       `json:"hero_id"`
+    PlayerKills          int       `json:"player_kills"`
+    PlayerDeaths         int       `json:"player_deaths"`
+    PlayerAssists        int       `json:"player_assists"`
+    NetWorth             int       `json:"net_worth"`
+    MatchDurationS       int       `json:"match_duration_s"`
+    MatchResult          int       `json:"match_result"`
+    PlayerTeam           int       `json:"player_team"`
+    StartTime            int64     `json:"start_time"`
+    HeroName             string    `json:"hero_name"`
+    HeroAvatar           string    `json:"hero_avatar,omitempty"`
+    PlayerRankAfterMatch int       `json:"player_rank_after_match"`
+    RankName             string    `json:"rank_name"`
+    SubRank              int       `json:"sub_rank"`
+    RankImage            string    `json:"rank_image"`
+    PlayerRankChange     int       `json:"player_rank_change"`
+    Kills                int       `json:"kills,omitempty"`
+    Deaths               int       `json:"deaths,omitempty"`
+    Assists              int       `json:"assists,omitempty"`
+    DurationMinutes      int       `json:"duration_minutes,omitempty"`
+    MatchTime            time.Time `json:"match_time,omitempty"`
+    Result               string    `json:"result"`
+}
 ```
 
----
-
-## 📚 Все созданные файлы
-
+**Frontend** (`frontend/src/entities/player/types/types.ts`):
+```typescript
+interface Match {
+  id: string  // ❌ Should be "match_id"
+  hero_name: string
+  hero_avatar: string
+  result: 'Win' | 'Loss'
+  player_kills: number
+  player_deaths: number
+  player_assists: number
+  match_duration_s: number
+  player_rank_change: number
+  player_rank_after_match: number
+  rank_name: string
+  sub_rank: number | undefined
+  rank_image: string | undefined
+  match_time: string
+  souls: number  // ❌ Not in backend Match model
+  player_score: number  // ❌ Not in backend Match model
+}
 ```
-.
-├── README.md                           ✅ Main documentation
-├── PROJECT_OVERVIEW.md                 ✅ Project overview
-├── ROADMAP.md                          ✅ Development roadmap
-├── GETTING_STARTED.md                  ✅ Quick start guide
-├── DEVELOPMENT_WORKFLOW.md             ✅ Git workflow & conventions
-├── CONTRIBUTING.md                     ✅ Contributing guide
-├── TODO_SUMMARY.md                     ✅ TODO quick reference
-├── ANALYSIS_COMPLETE.md                ✅ This file
-├── LICENSE                             ✅ MIT License
-└── .github/
-    ├── PULL_REQUEST_TEMPLATE.md        ✅ PR template
-    └── ISSUE_TEMPLATE/
-        ├── bug_report.md               ✅ Bug template
-        ├── feature_request.md          ✅ Feature template
-        └── config.yml                  ✅ Issue config
+
+**Issues**:
+- Frontend uses `id` instead of `match_id`
+- Frontend missing many fields: `hero_id`, `net_worth`, `match_result`, `player_team`, `start_time`, etc.
+- Frontend has `souls` and `player_score` which aren't in backend Match
+- Frontend has `result` as enum, backend has both `result` string and `match_result` int
+
+---
+
+### 4. **HeroStat**
+**Backend** (`backend/internal/domain/hero_stat.go`):
+```go
+type HeroStat struct {
+    HeroID     int     `json:"hero_id"`
+    HeroName   string  `json:"hero_name"`
+    Matches    int     `json:"matches_played"`  // ⚠️ "matches_played"
+    WinRate    float64 `json:"win_rate"`
+    KDA        float64 `json:"kda"`
+    HeroAvatar string  `json:"hero_avatar,omitempty"`
+}
 ```
 
----
+**Frontend** (`frontend/src/entities/player/types/types.ts`):
+```typescript
+interface HeroStat {
+  hero_name: string
+  matches: number  // ❌ Should be "matches_played"
+  win_rate: number
+  kda: number
+  hero_avatar?: string
+}
+```
 
-## 🎉 Заключение
-
-Проект **Deadlock Stats** имеет:
-- ✅ **Отличную основу** - чистая архитектура, современный стек
-- ✅ **Большой потенциал** - Deadlock новая игра, сообщество растет
-- ⚠️ **Критические проблемы** - требуют немедленного исправления
-- 🚀 **Ясный план** - 30 TODO задач, roadmap на 9 месяцев
-
-**Следующий шаг**: Начните с задачи `fix/error-handling-backend` или `fix/remove-console-logs`
-
-**Рекомендация**: 
-1. Сначала исправьте все 🔴 Critical (Week 1-2)
-2. Затем 🟡 High priority (Week 3-4)
-3. После этого - новые features
-
-**Срок до production-ready**: 4-6 недель (при выполнении Phase 1 + Phase 2)
+**Issues**:
+- Missing `hero_id` field
+- `matches` should be `matches_played`
 
 ---
 
-## 💡 Дополнительные идеи
+### 5. **User**
+**Backend** (`backend/internal/domain/user.go`):
+```go
+type User struct {
+    ID         uuid.UUID `json:"id"`
+    SteamID    string    `json:"steam_id"`
+    Nickname   string    `json:"nickname"`
+    AvatarURL  string    `json:"avatar_url"`
+    ProfileURL string    `json:"profile_url"`
+    CreatedAt  time.Time `json:"created_at"`
+    UpdatedAt  time.Time `json:"updated_at"`
+}
+```
 
-### На основе Deadlock Wiki:
-1. **Item Database** - интеграция с wiki, фильтры, builds
-2. **Hero Guides** - детальные гайды по героям
-3. **Patch Notes Parser** - автоматический парсинг обновлений
-4. **Meta Tracker** - отслеживание изменений meta по патчам
-5. **Match Predictor** - ML модель для предсказания исхода
-6. **Replay Analyzer** - парсинг .dem файлов
-7. **Heatmaps** - visualization смертей/киллов на карте
-8. **Tournament System** - поддержка турниров
+**Backend DTO** (`backend/internal/dto/user_search_result.go`):
+```go
+type UserSearchResult struct {
+    ID         string     `json:"id"`
+    SteamID    string     `json:"steam_id"`
+    Nickname   string     `json:"nickname"`
+    AvatarURL  string     `json:"avatar_url"`
+    ProfileURL string     `json:"profile_url"`
+    CreatedAt  *time.Time `json:"created_at,omitempty"`
+    UpdatedAt  *time.Time `json:"updated_at,omitempty"`
+    
+    AccountID   int    `json:"account_id,omitempty"`
+    CountryCode string `json:"countrycode,omitempty"`
+    LastUpdated int64  `json:"last_updated,omitempty"`
+    Realname    string `json:"realname,omitempty"`
+    
+    IsDeadlockPlayer    bool `json:"is_deadlock_player"`
+    DeadlockStatusKnown bool `json:"deadlock_status_known"`
+}
+```
+
+**Frontend** (`frontend/src/entities/user/types/types.ts`):
+```typescript
+interface User {
+  id: string
+  steam_id: string
+  nickname: string
+  avatar_url: string
+  profile_url: string
+  created_at?: Date  // ❌ Should be string (ISO format)
+  updated_at?: Date  // ❌ Should be string (ISO format)
+  
+  account_id?: number
+  countrycode?: string
+  last_updated?: number
+  realname?: string
+  
+  is_deadlock_player: boolean
+  deadlock_status_known: boolean
+}
+```
+
+**Issues**:
+- Frontend uses `Date` type but backend sends ISO string
+- Frontend matches DTO structure more than domain model
 
 ---
 
-**Готово к работе! Удачи в разработке! 🚀**
+### 6. **PlayerProfile**
+**Backend** (`backend/internal/domain/player_profile.go`):
+```go
+type PlayerProfile struct {
+    SteamID               string              `json:"steam_id"`
+    Nickname              string              `json:"nickname"`
+    AvatarURL             string              `json:"avatar_url"`
+    ProfileURL            string              `json:"profile_url"`
+    CreatedAt             time.Time           `json:"created_at"`
+    LastMatchTime         time.Time           `json:"last_match_time"`
+    PlayerRank            int                 `json:"player_rank"`
+    RankName              string              `json:"rank_name"`
+    SubRank               int                 `json:"sub_rank"`
+    RankImage             string              `json:"rank_image"`
+    WinRate               float64             `json:"win_rate"`
+    KDRatio               float64             `json:"kd_ratio"`
+    AvgMatchesPerDay      float64             `json:"avg_matches_per_day"`
+    FavoriteHero          string              `json:"favorite_hero"`
+    LastUpdatedAt         time.Time           `json:"last_updated_at"`
+    TotalMatches          int                 `json:"total_matches"`
+    TotalKills            int                 `json:"total_kills"`
+    TotalDeaths           int                 `json:"total_deaths"`
+    TotalAssists          int                 `json:"total_assists"`
+    MaxKillsInMatch       int                 `json:"max_kills_in_match"`
+    AvgDamagePerMatch     float64             `json:"avg_damage_per_match"`
+    AvgObjectivesPerMatch float64             `json:"avg_objectives_per_match"`
+    AvgSoulsPerMin        float64             `json:"avg_souls_per_min"`
+    RecentMatches         []Match             `json:"recent_matches"`
+    HeroStats             []HeroStat          `json:"hero_stats"`
+    PerformanceDynamics   PerformanceDynamics `json:"performance_dynamics"`
+}
+```
 
-_Все файлы документации готовы. Можно начинать работу с TODO списка._
+**Frontend** (`frontend/src/entities/player/types/types.ts`):
+```typescript
+interface PlayerProfile {
+  steam_id: string
+  nickname: string
+  avatar_url: string
+  last_match_time: string
+  last_updated_at: string
+  player_rank: number
+  rank_name: string
+  sub_rank: number | undefined
+  rank_image: string
+  win_rate: number
+  kd_ratio: number
+  total_matches: number
+  total_kills: number
+  total_deaths: number
+  total_assists: number
+  max_kills_in_match: number
+  avg_souls_per_min: number
+  recent_matches: Match[]
+  hero_stats: HeroStat[]
+  performance_dynamics: PerformanceDynamics
+}
+```
+
+**Issues**:
+- Missing many fields from backend:
+  - `profile_url`
+  - `created_at`
+  - `avg_matches_per_day`
+  - `favorite_hero`
+  - `avg_damage_per_match`
+  - `avg_objectives_per_match`
 
 ---
 
-**Questions?** 
-- Read: `GETTING_STARTED.md`
-- Check: `TODO_SUMMARY.md`
-- Follow: `DEVELOPMENT_WORKFLOW.md`
-- Plan: `ROADMAP.md`
+## ❌ Missing Frontend Models
 
-**Let's build the best Deadlock stats platform! 💪**
+### 1. **Build**
+**Backend** (`backend/internal/domain/builds.go`):
+```go
+type Build struct {
+    ID          uuid.UUID `json:"id"`
+    AuthorID    uuid.UUID `json:"author_id"`
+    Title       string    `json:"title"`
+    Description string    `json:"description"`
+    GameVersion string    `json:"game_version"`
+    IsPublic    bool      `json:"is_public"`
+    ViewCount   int       `json:"view_count"`
+    CreatedAt   time.Time `json:"created_at"`
+    UpdatedAt   time.Time `json:"updated_at"`
+}
+```
 
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 2. **Comment**
+**Backend** (`backend/internal/domain/comments.go`):
+```go
+type Comment struct {
+    ID          uuid.UUID `json:"id"`
+    AuthorID    uuid.UUID `json:"author_id"`
+    ParentID    uuid.UUID `json:"parent_id"`
+    ContentType string    `json:"content_type"`
+    ContentID   uuid.UUID `json:"content_id"`
+    Body        string    `json:"body"`
+    CreatedAt   time.Time `json:"created_at"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 3. **ContentTag**
+**Backend** (`backend/internal/domain/content_tags.go`):
+```go
+type ContentTag struct {
+    TagID       int       `json:"tag_id"`
+    ContentType string    `json:"content_type"`
+    ContentID   uuid.UUID `json:"content_id"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 4. **Tag**
+**Backend** (`backend/internal/domain/tags.go`):
+```go
+type Tag struct {
+    ID   int    `json:"id"`
+    Name string `json:"name"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 5. **Vote**
+**Backend** (`backend/internal/domain/votes.go`):
+```go
+type Vote struct {
+    UserID      uuid.UUID `json:"user_id"`
+    ContentType string    `json:"content_type"`
+    ContentID   uuid.UUID `json:"content_id"`
+    VoteValue   int       `json:"vote_value"`
+    CreatedAt   time.Time `json:"created_at"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 6. **PlayerStats**
+**Backend** (`backend/internal/domain/player_stats.go`):
+```go
+type PlayerStats struct {
+    UserID           uuid.UUID `json:"user_id"`
+    KDRatio          float64   `json:"kd_ratio"`
+    WinRate          float64   `json:"win_rate"`
+    AvgMatchesPerDay float64   `json:"avg_matches_per_day"`
+    FavoriteHero     string    `json:"favorite_hero"`
+    LastUpdatedAt    time.Time `json:"last_updated_at"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 7. **MateStatAPI**
+**Backend** (`backend/internal/domain/mate_stat_api.go`):
+```go
+type MateStatAPI struct {
+    MateID        int `json:"mate_id"`
+    Wins          int `json:"wins"`
+    MatchesPlayed int `json:"matches_played"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+### 8. **SteamProfileSearch**
+**Backend** (`backend/internal/domain/steam_profile_search.go`):
+```go
+type SteamProfileSearch struct {
+    AccountID   int    `json:"account_id"`
+    Avatar      string `json:"avatar"`
+    CountryCode string `json:"countrycode"`
+    LastUpdated int64  `json:"last_updated"`
+    Personaname string `json:"personaname"`
+    Profileurl  string `json:"profileurl"`
+    Realname    string `json:"realname"`
+}
+```
+
+**Frontend**: ❌ **Missing entirely** - needs to be added
+
+---
+
+## 📝 Summary of Changes Needed
+
+### High Priority
+1. ✅ Align `Crosshair` model - remove redundant interfaces, add missing fields
+2. ✅ Align `Match` model - use correct field names from backend
+3. ✅ Align `HeroStat` model - use `matches_played`, add `hero_id`
+4. ✅ Align `User` model - fix date types
+5. ✅ Add missing `CrosshairLike` model
+
+### Medium Priority
+6. ✅ Add `Build` model
+7. ✅ Add `Comment` model
+8. ✅ Add `Vote` model
+9. ✅ Add `Tag` model
+10. ✅ Add `ContentTag` model
+
+### Low Priority
+11. ✅ Add `PlayerStats` model
+12. ✅ Add `MateStatAPI` model
+13. ✅ Add `SteamProfileSearch` model
+14. ✅ Complete `PlayerProfile` model with all fields
+
+---
+
+## Implementation Plan
+
+1. **Phase 1**: Update existing misaligned models
+   - Fix Crosshair models
+   - Fix Match model
+   - Fix HeroStat model
+   - Fix User model
+
+2. **Phase 2**: Add missing critical models
+   - Add CrosshairLike
+   - Add Build
+   - Add Comment
+   - Add Vote
+   - Add Tag
+   - Add ContentTag
+
+3. **Phase 3**: Add remaining models
+   - Add PlayerStats
+   - Add MateStatAPI
+   - Add SteamProfileSearch
+
+4. **Phase 4**: Update components using these models
+   - Search through codebase for usages
+   - Update component props and state
+   - Update API calls
+
+---
+
+*Generated: ${new Date().toISOString()}*

@@ -16,6 +16,13 @@ interface PlayerStyleRadarChartProps {
 }
 
 const CustomTooltip = ({ active, payload, label }: any) => {
+  const safeToFixed = (value: number | undefined | null, decimals: number = 2): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0.00';
+    }
+    return value.toFixed(decimals);
+  };
+
   if (active && payload && payload.length) {
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
@@ -25,7 +32,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
               {label}
             </span>
             <span className="font-bold text-muted-foreground">
-              {payload[0].value.toFixed(2)}
+              {safeToFixed(payload[0].value, 2)}
             </span>
           </div>
         </div>
@@ -44,6 +51,7 @@ export const PlayerStyleRadarChart = ({
     !stats ||
     !matches ||
     matches.length === 0 ||
+    !stats.avg_souls_per_min ||
     stats.avg_souls_per_min === 0
   ) {
     return (
@@ -77,7 +85,7 @@ export const PlayerStyleRadarChart = ({
     { subject: 'Aggression', value: (avgKills + avgAssists / 4) * 5.5 },
     { subject: 'Support', value: (avgAssists - avgAssists / 4) * 5 },
     { subject: 'Durability', value: (1 / (avgDeaths || 1)) * 150 },
-    { subject: 'Farming', value: stats.avg_souls_per_min / 12 },
+    { subject: 'Farming', value: (stats.avg_souls_per_min || 0) / 12 },
   ]
 
   const maxValue = Math.max(...dataPoints.map(p => p.value), 100)

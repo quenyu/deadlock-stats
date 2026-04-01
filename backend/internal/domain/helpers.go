@@ -23,7 +23,12 @@ func GetRankFromScore(playerScore float64) int {
 }
 
 func CalculatePerformanceDynamics(matches []Match) PerformanceDynamics {
-	var dynamics PerformanceDynamics
+	dynamics := PerformanceDynamics{
+		WinLoss: Trend{Trend: "stable", Value: "0/0", Sparkline: []float64{}},
+		KDA:     Trend{Trend: "stable", Value: "0.00 KDA", Sparkline: []float64{}},
+		Rank:    Trend{Trend: "stable", Value: "0 Rank", Sparkline: []float64{}},
+	}
+
 	if len(matches) < 2 {
 		return dynamics
 	}
@@ -76,7 +81,13 @@ func CalculatePerformanceDynamics(matches []Match) PerformanceDynamics {
 
 	var wins, losses int
 	for _, m := range sortedMatches {
-		if m.Result == "Win" {
+		var isWin bool
+		if m.PlayerTeam == 1 {
+			isWin = m.MatchResult == 1
+		} else {
+			isWin = m.MatchResult == 0
+		}
+		if isWin {
 			wins++
 			winLossTrend.Sparkline = append(winLossTrend.Sparkline, float64(1))
 		} else {

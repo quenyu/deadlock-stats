@@ -21,13 +21,20 @@ interface HeroMMRChartProps {
 }
 
 const CustomTooltip = ({ active, payload }: any) => {
+  const safeToFixed = (value: number | undefined | null, decimals: number = 0): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0';
+    }
+    return value.toFixed(decimals);
+  };
+
   if (active && payload && payload.length) {
     const data = payload[0].payload;
-    const date = new Date(data.start_time * 1000).toLocaleDateString();
+    const date = data.start_time ? new Date(data.start_time * 1000).toLocaleDateString() : 'Unknown';
     return (
       <div className="rounded-lg border bg-background p-2 shadow-sm">
         <p className="text-sm font-bold">{`Rank: ${data.rank}`}</p>
-        <p className="text-xs text-muted-foreground">{`Score: ${data.player_score.toFixed(0)}`}</p>
+        <p className="text-xs text-muted-foreground">{`Score: ${safeToFixed(data.player_score, 0)}`}</p>
         <p className="text-xs text-muted-foreground">{date}</p>
       </div>
     );
@@ -37,10 +44,10 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export const HeroMMRChart = ({ heroMMRHistory }: HeroMMRChartProps) => {
   const [selectedHeroId, setSelectedHeroId] = useState<string | null>(
-    heroMMRHistory?.[0]?.hero_id.toString() || null
+    Array.isArray(heroMMRHistory) && heroMMRHistory?.[0]?.hero_id.toString() || null
   );
 
-  if (!heroMMRHistory || heroMMRHistory.length === 0) {
+  if (!Array.isArray(heroMMRHistory) || heroMMRHistory.length === 0) {
     return (
       <Card>
         <CardHeader>
@@ -51,9 +58,8 @@ export const HeroMMRChart = ({ heroMMRHistory }: HeroMMRChartProps) => {
     );
   }
 
-  const selectedHeroData = heroMMRHistory.find(h => h.hero_id.toString() === selectedHeroId);
+  const selectedHeroData = Array.isArray(heroMMRHistory) ? heroMMRHistory.find(h => h.hero_id.toString() === selectedHeroId) : null;
 
-  console.log(heroMMRHistory);
   return (
     <Card>
       <CardHeader>
@@ -67,7 +73,7 @@ export const HeroMMRChart = ({ heroMMRHistory }: HeroMMRChartProps) => {
               <SelectValue placeholder="Select a hero" />
             </SelectTrigger>
             <SelectContent>
-              {heroMMRHistory.map(hero => (
+              {Array.isArray(heroMMRHistory) && heroMMRHistory.map(hero => (
                 <SelectItem key={hero.hero_id} value={hero.hero_id.toString()}>
                   {hero.hero_name}
                 </SelectItem>
@@ -78,10 +84,10 @@ export const HeroMMRChart = ({ heroMMRHistory }: HeroMMRChartProps) => {
       </CardHeader>
       <CardContent>
         <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={selectedHeroData?.history}>
+          <LineChart data={Array.isArray(selectedHeroData?.history) ? selectedHeroData.history : []}>
             <XAxis 
               dataKey="start_time" 
-              tickFormatter={(time) => new Date(time * 1000).toLocaleDateString()} 
+              tickFormatter={(time) => time ? new Date(time * 1000).toLocaleDateString() : 'Unknown'} 
               tick={{ fontSize: 12 }}
             />
             <YAxis 

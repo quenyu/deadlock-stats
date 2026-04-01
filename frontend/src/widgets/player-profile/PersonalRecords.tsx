@@ -14,6 +14,13 @@ interface PersonalRecordsProps {
 }
 
 export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
+  const safeToFixed = (value: number | undefined | null, decimals: number = 2): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0.00';
+    }
+    return value.toFixed(decimals);
+  };
+
   if (!records) return null;
   
   return (
@@ -27,22 +34,22 @@ export const PersonalRecords = ({ records }: PersonalRecordsProps) => {
           <div className="bg-muted p-3 rounded">
             <div className="text-sm text-muted-foreground">Max Kills</div>
             <div className="text-2xl font-bold">{records.max_kills}</div>
-            <div className="text-xs text-muted-foreground">Match #{records.max_kills_match_id.slice(-6)}</div>
+            <div className="text-xs text-muted-foreground">Match #{records.max_kills_match_id ? records.max_kills_match_id.slice(-6) : 'N/A'}</div>
           </div>
           <div className="bg-muted p-3 rounded">
             <div className="text-sm text-muted-foreground">Max Assists</div>
             <div className="text-2xl font-bold">{records.max_assists}</div>
-            <div className="text-xs text-muted-foreground">Match #{records.max_assists_match_id.slice(-6)}</div>
+            <div className="text-xs text-muted-foreground">Match #{records.max_assists_match_id ? records.max_assists_match_id.slice(-6) : 'N/A'}</div>
           </div>
           <div className="bg-muted p-3 rounded">
             <div className="text-sm text-muted-foreground">Max Souls</div>
             <div className="text-2xl font-bold">{records.max_net_worth}</div>
-            <div className="text-xs text-muted-foreground">Match #{records.max_net_worth_match_id.slice(-6)}</div>
+            <div className="text-xs text-muted-foreground">Match #{records.max_net_worth_match_id ? records.max_net_worth_match_id.slice(-6) : 'N/A'}</div>
           </div>
           <div className="bg-muted p-3 rounded">
             <div className="text-sm text-muted-foreground">Best KDA</div>
-            <div className="text-2xl font-bold">{records.best_kda.toFixed(2)}</div>
-            <div className="text-xs text-muted-foreground">Match #{records.best_kda_match_id.slice(-6)}</div>
+            <div className="text-2xl font-bold">{safeToFixed(records.best_kda, 2)}</div>
+            <div className="text-xs text-muted-foreground">Match #{records.best_kda_match_id ? records.best_kda_match_id.slice(-6) : 'N/A'}</div>
           </div>
         </div>
       </CardContent>

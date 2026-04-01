@@ -3,6 +3,7 @@ import { devtools } from 'zustand/middleware'
 import { User } from '../types/types'
 import { fetchCurrentUser } from '../api/fetchCurrentUser'
 import { API_ENDPOINTS } from '@/shared/constants/api'
+import { extractErrorMessage } from '@/shared/lib/errors'
 
 interface UserState {
   user: User | null
@@ -24,14 +25,15 @@ const useUserStore = create<UserState>()(
           const response = await fetchCurrentUser()
 
           if (!response) {
+            // User not authenticated - this is normal, not an error
             set({ user: null, isLoading: false, error: null })
             return
           }
 
-          set({ user: response, isLoading: false })
+          set({ user: response as User, isLoading: false })
         } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : 'An unknown error occurred'
+          // Only set error for unexpected failures (not 401)
+          const errorMessage = extractErrorMessage(error, 'Failed to fetch user')
           set({ user: null, isLoading: false, error: errorMessage })
         }
       },

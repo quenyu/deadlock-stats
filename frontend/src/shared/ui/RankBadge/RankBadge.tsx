@@ -33,7 +33,7 @@ export const RankBadge = ({ rank, subrank, rankImage }: RankBadgeProps) => {
 
   return (
     <div className="flex items-center gap-2 mt-1">
-      {imageUrl && <img src={imageUrl} alt={rank} className="h-14 w-14" />}
+      {imageUrl && <img src={imageUrl} alt={rank} className="h-14" />}
       <div className="flex flex-col">
         <span className="font-semibold text-lg">{rank}</span>
         {subrankText && (

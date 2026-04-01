@@ -1,6 +1,7 @@
 import { create } from 'zustand'
-import { ExtendedPlayerProfileDTO } from '@/entities/deadlock'
 import { fetchExtendedPlayerProfile } from '@/entities/player/api/fetchExtendedPlayerProfile'
+import { ExtendedPlayerProfileDTO } from '@/entities/deadlock/types/types'
+import { extractErrorMessage } from '@/shared/lib/errors'
 
 interface ExtendedProfileState {
   profile: ExtendedPlayerProfileDTO | null
@@ -11,19 +12,16 @@ interface ExtendedProfileState {
 
 export const useExtendedProfileStore = create<ExtendedProfileState>((set) => ({
   profile: null,
-  loading: true,
+  loading: false,
   error: null,
   fetchProfile: async (steamId: string) => {
+    set({ loading: true, error: null })
     try {
-      set({ loading: true, error: null })
       const data = await fetchExtendedPlayerProfile(steamId)
-      console.log('Full API Response for Extended Player Profile:', data)
-      console.log('--- MMR History Details ---')
-      console.log(data.mmr_history)
-      console.log('---------------------------')
       set({ profile: data, loading: false })
-    } catch (err) {
-      set({ error: 'Failed to fetch player profile.', loading: false })
+    } catch (error) {
+      const errorMessage = extractErrorMessage(error, 'Failed to fetch extended player profile')
+      set({ error: errorMessage, loading: false })
     }
   },
 })) 

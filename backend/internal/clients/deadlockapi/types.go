@@ -28,30 +28,6 @@ type HeroV2 struct {
 	Images    HeroImages `json:"images"`
 }
 
-type CardHero struct {
-	ID    int `json:"id"`
-	Kills int `json:"kills,omitempty"`
-	Wins  int `json:"wins,omitempty"`
-}
-
-type CardStat struct {
-	StatID    int `json:"stat_id"`
-	StatScore int `json:"stat_score"`
-}
-
-type DeadlockCardSlot struct {
-	Hero CardHero  `json:"hero"`
-	Stat *CardStat `json:"stat,omitempty"`
-}
-
-type DeadlockCard struct {
-	AccountID        *int               `json:"account_id"`
-	RankedBadgeLevel *int               `json:"ranked_badge_level"`
-	RankedRank       *int               `json:"ranked_rank"`
-	RankedSubrank    *int               `json:"ranked_subrank"`
-	Slots            []DeadlockCardSlot `json:"slots"`
-}
-
 type DeadlockMatch struct {
 	MatchID        int64 `json:"match_id"`
 	HeroID         int   `json:"hero_id"`
@@ -63,6 +39,7 @@ type DeadlockMatch struct {
 	MatchDurationS int   `json:"match_duration_s"`
 	MatchResult    int   `json:"match_result"`
 	StartTime      int64 `json:"start_time"`
+	PlayerTeam     int   `json:"player_team"`
 }
 
 type HeroStatAPI struct {

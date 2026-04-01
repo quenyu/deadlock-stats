@@ -10,6 +10,7 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/quenyu/deadlock-stats/internal/clients/deadlockapi"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 )
 
 const (
@@ -35,32 +36,18 @@ func NewStaticDataService(logger *zap.Logger) *StaticDataService {
 }
 
 func (s *StaticDataService) LoadStaticData() error {
-	var wg sync.WaitGroup
-	errs := make(chan error, 2)
+	var g errgroup.Group
 
-	wg.Add(2)
+	g.Go(func() error {
+		return s.loadRanks()
+	})
 
-	go func() {
-		defer wg.Done()
-		if err := s.loadRanks(); err != nil {
-			errs <- err
-		}
-	}()
+	g.Go(func() error {
+		return s.loadHeroes()
+	})
 
-	go func() {
-		defer wg.Done()
-		if err := s.loadHeroes(); err != nil {
-			errs <- err
-		}
-	}()
-
-	wg.Wait()
-	close(errs)
-
-	for err := range errs {
-		if err != nil {
-			return err
-		}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
 	return nil

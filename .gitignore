@@ -1,39 +1,395 @@
-# IDE files
-.idea/
-.vscode/
+# Deadlock Stats - .gitignore
+
+# ===========================================
+# Speckit System Files (Generated)
+# ===========================================
+# Speckit создает временные файлы и директории
+.specify/temp/
+.specify/cache/
+.specify/logs/
+
+# ===========================================
+# IDE & Editor Files
+# ===========================================
+# Cursor IDE
 .cursor/
+.cursorrules
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Vim
 *.swp
 *.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ===========================================
+# OS Generated Files
+# ===========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
 .DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
 
-# Docker volumes
-postgres_data/
-redis_data/
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
 
-# Node.js
-node_modules/
-npm-debug.log
-yarn-error.log
-
-
-# Go
+# ===========================================
+# Backend (Go)
+# ===========================================
+# Binaries
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
+backend/main
+backend/main.exe
+backend/deadlock-stats
+backend/deadlock-stats.exe
+
+# Test binary
 *.test
-*.out
+
+# Coverage
+coverage.out
+coverage.html
+*.cover
+*.coverprofile
+
+# Go workspace file
 go.work
+go.work.sum
 
-# Build artifacts
-dist/
+# Air (hot reload)
+.air.toml
 tmp/
-bin/
 
-# Local env files
+# ===========================================
+# Frontend (Node.js/React)
+# ===========================================
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage
+.grunt
+
+# Bower dependency directory
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons
+build/Release
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
 .env
-.env.local
 .env.development.local
 .env.test.local
-.env.production.local .cursor/
+.env.production.local
+.env.local
+
+# parcel-bundler cache
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+public
+
+# Storybook build outputs
+.out
+.storybook-out
+storybook-static
+
+# Temporary folders
+tmp/
+temp/
+
+# ===========================================
+# Database
+# ===========================================
+# SQLite
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL
+*.pgsql
+*.sql
+
+# Database dumps
+*.dump
+*.sql.gz
+
+# ===========================================
+# Docker
+# ===========================================
+# Docker volumes
+docker-data/
+postgres-data/
+redis-data/
+
+# Docker compose override files
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# ===========================================
+# Logs
+# ===========================================
+# Log files
+*.log
+logs/
+log/
+
+# Application logs
+app.log
+error.log
+access.log
+
+# ===========================================
+# Configuration & Secrets
+# ===========================================
+# Environment files
+.env*
+!.env.example
+
+# Configuration files with secrets
+config.local.yaml
+config.production.yaml
+secrets.yaml
+secrets.json
+
+# API keys and tokens
+*.key
+*.pem
+*.p12
+*.pfx
+
+# ===========================================
+# Build Artifacts
+# ===========================================
+# Build directories
+build/
+dist/
+out/
+target/
+
+# Compiled assets
+*.min.js
+*.min.css
+
+# ===========================================
+# Testing
+# ===========================================
+# Test results
+test-results/
+coverage/
+.nyc_output/
+
+# Jest
+jest-cache/
+
+# ===========================================
+# Documentation
+# ===========================================
+# Generated documentation
+docs/build/
+docs/_build/
+site/
+
+# ===========================================
+# Temporary Files
+# ===========================================
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+
+# ===========================================
+# Package Managers
+# ===========================================
+# Yarn
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# pnpm
+.pnpm-debug.log*
+
+# ===========================================
+# Monitoring & Analytics
+# ===========================================
+# Sentry
+.sentryclirc
+
+# Analytics
+analytics/
+
+# ===========================================
+# Backup Files
+# ===========================================
+# Backup files
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+
+# ===========================================
+# IDE Specific
+# ===========================================
+# Cursor specific
+.cursor/
+
+# Local development
+.local/
+local/
+
+# ===========================================
+# Project Specific
+# ===========================================
+# Deadlock Stats specific
+uploads/
+static/uploads/
+media/
+
+# Cache directories
+.cache/
+cache/
+
+# Generated files
+generated/
+auto-generated/
+
+# ===========================================
+# Keep Important Files
+# ===========================================
+# Keep these important files
+!.gitkeep
+!.gitignore
+!README.md
+!LICENSE
+!package.json
+!package-lock.json
+!yarn.lock
+!go.mod
+!go.sum
+!docker-compose.yml
+!Dockerfile
+!.specify/
+!CLAUDE.md
+!.cursor/rules/specify-rules.mdc

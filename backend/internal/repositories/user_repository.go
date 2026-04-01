@@ -48,12 +48,12 @@ func (r *UserRepository) FindOrCreate(user *domain.User) error {
 
 func (r *UserRepository) insertOrUpdateUser(tx *gorm.DB, user *domain.User) error {
 	query := `
-		INSERT INTO users (id, steam_id, nickname, avatar_url, profile_url, created_at, updated_at) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7) 
-		ON CONFLICT (steam_id) 
-		DO UPDATE SET nickname = $3, avatar_url = $4, profile_url = $5, updated_at = $7 
-		RETURNING id
-	`
+			INSERT INTO users (id, steam_id, nickname, avatar_url, profile_url, created_at, updated_at) 
+			VALUES ($1, $2, $3, $4, $5, $6, $7) 
+			ON CONFLICT (steam_id) 
+			DO UPDATE SET nickname = $3, avatar_url = $4, profile_url = $5, updated_at = $7 
+			RETURNING id
+		`
 
 	return tx.Raw(query,
 		user.ID, user.SteamID, user.Nickname, user.AvatarURL,
@@ -63,11 +63,11 @@ func (r *UserRepository) insertOrUpdateUser(tx *gorm.DB, user *domain.User) erro
 
 func (r *UserRepository) ensurePlayerStats(tx *gorm.DB, userID uuid.UUID) error {
 	statsQuery := `
-		INSERT INTO player_stats (user_id) 
-		VALUES ($1) 
-		ON CONFLICT (user_id) 
-		DO NOTHING
-	`
+			INSERT INTO player_stats (user_id) 
+			VALUES ($1) 
+			ON CONFLICT (user_id) 
+			DO NOTHING
+		`
 	return tx.Exec(statsQuery, userID).Error
 }
 
@@ -88,4 +88,8 @@ func (r *UserRepository) FindByID(id string) (*domain.User, error) {
 	}
 
 	return &user, nil
+}
+
+func (r *UserRepository) GetDB() *gorm.DB {
+	return r.db
 }

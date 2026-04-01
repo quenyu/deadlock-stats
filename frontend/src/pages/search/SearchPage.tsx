@@ -1,60 +1,44 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Input } from '@/shared/ui/input'
-import { api } from '@/shared/api/api'
-import { type User } from '@/entities/user'
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/shared/ui/card'
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/ui/avatar'
-import { Button } from '@/shared/ui/button'
-import { AppLink } from '@/shared/ui/AppLink/AppLink'
 import { routes } from '@/shared/constants/routes'
 import React from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select'
 import { Label } from '@/shared/ui/label'
+import { PaginatedResults } from '@/shared/ui/PaginatedResults'
+import { PageSizeSelector } from '@/shared/ui/PageSizeSelector'
+import { usePlayerSearch } from '@/shared/lib/react-query/hooks'
+import { SkeletonList } from '@/shared/ui/skeleton'
+import { createLogger } from '@/shared/lib/logger'
+import { PlayerSearchResult } from '@/shared/lib/validation'
+import { User } from '@/entities/user'
+
+type UserCardData = PlayerSearchResult | User
+
+const log = createLogger('SearchPage')
 
 export const SearchPage = () => {
   const [query, setQuery] = useState('')
   const [searchType, setSearchType] = useState('nickname')
-  const [results, setResults] = useState<User[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const navigate = useNavigate()
 
-  useEffect(() => {
-    if (searchType === 'nickname' && query.length < 3) {
-      setResults([])
-      setError(null)
-      return
-    }
-    if (query.length === 0) {
-      setResults([])
-      setError(null)
-      return
-    }
+  const shouldSearch = searchType === 'nickname' ? query.length >= 3 : query.length > 0
+  
+  const { data, isLoading, error } = usePlayerSearch(query, shouldSearch)
+  
+  const results = data?.players || []
+  const totalCount = data?.meta.total_count || 0
+  const totalPages = data?.meta.total_pages || 0
 
-    const fetchResults = async () => {
-      setLoading(true)
-      setError(null)
-      try {
-        const response = await api.get<User[]>(`/players/search?q=${query}&type=${searchType}`)
+  const handleUserClick = (user: UserCardData) => {
+    // Переход на профиль пользователя
+    const steamId = 'steamId' in user ? user.steamId : ('steam_id' in user ? user.steam_id : '')
+    navigate(routes.player.profile(steamId))
+  }
 
-        console.log("Data received from backend:", response.data);
-
-        setResults(response.data)
-        if (response.data.length === 0) {
-          setError('No players found.')
-        }
-      } catch (err) {
-        setError('Failed to search for players.')
-        console.error(err)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    const debounceTimeout = setTimeout(fetchResults, 300)
-    return () => clearTimeout(debounceTimeout)
-  }, [query, searchType])
-
-  console.log(results)
+  log.debug('Current search results', { count: results.length })
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
@@ -77,8 +61,8 @@ export const SearchPage = () => {
           <div className="w-[140px]">
             <Label className="mb-2 block">Search by</Label>
             <Select value={searchType} onValueChange={(value) => {setQuery(''); setSearchType(value)}}>
-              <SelectTrigger className="h-12">
-                <SelectValue />
+              <SelectTrigger className="h-12 w-full text-base">
+                <SelectValue placeholder="Search type" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="nickname">Nickname</SelectItem>
@@ -90,28 +74,43 @@ export const SearchPage = () => {
       </div>
 
       <div className="mt-8">
-        {loading && <div className="text-center">Searching...</div>}
-        {error && <div className="text-center text-red-500">{error}</div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {results.map((user) => (
-            <Card key={user.id}>
-              <CardHeader className="items-center">
-                <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.avatar_url} alt={user.nickname} />
-                  <AvatarFallback>{user.nickname.charAt(0)}</AvatarFallback>
-                </Avatar>
-              </CardHeader>
-              <CardContent className="text-center">
-                <CardTitle>{user.nickname}</CardTitle>
-              </CardContent>
-              <CardFooter>
-                <AppLink to={routes.player.profile(user.steam_id)} className="w-full">
-                  <Button className="w-full">View Profile</Button>
-                </AppLink>
-              </CardFooter>
-            </Card>
-          ))}
-        </div>
+        {error && <div className="text-center text-red-500 mb-4">{error.message}</div>}
+        
+        {totalCount > 0 && (
+          <div className="flex justify-end mb-4">
+            <PageSizeSelector 
+              pageSize={pageSize} 
+              onPageSizeChange={(newPageSize) => {
+                setPageSize(newPageSize)
+                setPage(1)
+              }} 
+            />
+          </div>
+        )}
+        
+        {isLoading ? (
+          <SkeletonList count={pageSize} showAvatar avatarSize={48} lines={2} />
+        ) : error ? (
+          <div className="text-center py-8 text-destructive">
+            Failed to search for players.
+          </div>
+        ) : results.length === 0 && shouldSearch ? (
+          <div className="text-center py-8 text-muted-foreground">
+            No players found.
+          </div>
+        ) : (
+          <PaginatedResults
+            results={results}
+            totalCount={totalCount}
+            page={page}
+            pageSize={pageSize}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            onUserClick={handleUserClick}
+            showExtendedInfo={true}
+            loading={false}
+          />
+        )}
       </div>
     </div>
   )

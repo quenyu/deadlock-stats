@@ -1,0 +1,4 @@
+ALTER TABLE crosshairs
+    ADD COLUMN IF NOT EXISTS settings JSONB,
+    ADD COLUMN IF NOT EXISTS description TEXT,
+    ADD COLUMN IF NOT EXISTS likes_count INTEGER DEFAULT 0; 

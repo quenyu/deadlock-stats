@@ -30,6 +30,10 @@ func (r *PlayerProfilePostgresRepository) FindBySteamID(ctx context.Context, ste
 		return nil, err
 	}
 
+	if user == nil {
+		return profile, nil
+	}
+
 	trendMatches, err := r.fetchTrendMatches(ctx, user.ID)
 	if err != nil {
 		return nil, err
@@ -202,6 +206,67 @@ func (r *PlayerProfilePostgresRepository) SearchByNickname(ctx context.Context, 
 	if err != nil {
 		return nil, err
 	}
+	return users, nil
+}
+
+func (r *PlayerProfilePostgresRepository) SearchByNicknamePartial(ctx context.Context, query string, limit int) ([]domain.User, error) {
+	var users []domain.User
+
+	err := r.db.WithContext(ctx).
+		Where("nickname ILIKE ?", fmt.Sprintf("%s%%", query)).
+		Or("nickname ILIKE ?", fmt.Sprintf("%%%s%%", query)).
+		Limit(limit).
+		Find(&users).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *PlayerProfilePostgresRepository) SearchBySteamIDPartial(ctx context.Context, query string, limit int) ([]domain.User, error) {
+	var users []domain.User
+
+	err := r.db.WithContext(ctx).
+		Where("steam_id LIKE ?", "%"+query+"%").
+		Limit(limit).
+		Find(&users).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *PlayerProfilePostgresRepository) GetPopularPlayers(ctx context.Context, limit int) ([]domain.User, error) {
+	var users []domain.User
+
+	err := r.db.WithContext(ctx).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&users).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
+func (r *PlayerProfilePostgresRepository) GetRecentlyActivePlayers(ctx context.Context, limit int) ([]domain.User, error) {
+	var users []domain.User
+
+	err := r.db.WithContext(ctx).
+		Order("updated_at DESC").
+		Limit(limit).
+		Find(&users).Error
+
+	if err != nil {
+		return nil, err
+	}
+
 	return users, nil
 }
 

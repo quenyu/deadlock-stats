@@ -15,6 +15,13 @@ interface BestMatesProps {
 }
 
 export const BestMates = ({ mates }: BestMatesProps) => {
+  const safeToFixed = (value: number | undefined | null, decimals: number = 1): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return '0.0';
+    }
+    return value.toFixed(decimals);
+  };
+
   if (!mates || mates.length === 0) {
     return null;
   }
@@ -33,7 +40,7 @@ export const BestMates = ({ mates }: BestMatesProps) => {
             <div className="flex items-center gap-4">
               <Avatar className="h-10 w-10">
                 <AvatarImage src={mate.avatar_url} alt={mate.nickname} />
-                <AvatarFallback>{mate.nickname.charAt(0)}</AvatarFallback>
+                <AvatarFallback>{mate.nickname ? mate.nickname.charAt(0) : "?"}</AvatarFallback>
               </Avatar>
               <div>
                 <p className="font-semibold text-sm">{mate.nickname}</p>
@@ -41,7 +48,7 @@ export const BestMates = ({ mates }: BestMatesProps) => {
               </div>
             </div>
             <div className="text-right">
-              <p className="font-bold text-green-500 text-sm">{mate.win_rate.toFixed(1)}%</p>
+              <p className="font-bold text-green-500 text-sm">{safeToFixed(mate.win_rate, 1)}%</p>
               <p className="text-xs text-muted-foreground">Win Rate</p>
             </div>
           </div>

@@ -1,2 +1,0 @@
-export { ErrorPage } from './ErrorPage'
-

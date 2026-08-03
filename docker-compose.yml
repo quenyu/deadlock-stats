@@ -1,50 +1,9 @@
 services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:80"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+  api:
+    build: .
     environment:
-      - VITE_API_URL=http://localhost:8080/api/v1
-    depends_on:
-      - backend
-
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+      PORT: "8080"
+      DEADLOCK_API_BASE_URL: "https://api.deadlock-api.com"
     ports:
       - "8080:8080"
-    volumes:
-      - ./backend/internal/config/config.yaml:/app/internal/config/config.yaml
-    environment:
-      - APP_ENV=development
-    depends_on:
-      - postgres
-      - redis
-
-  postgres:
-    image: postgres:16-alpine
-    ports:
-      - "5433:5432"
-    environment:
-      - POSTGRES_DB=deadlock_stats
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-
-volumes:
-  postgres_data:
-  redis_data: 
+    restart: unless-stopped
